@@ -17,6 +17,5 @@ jobs:
 
       - name: Lint Code
         run: |
-
-    pip install flake8
-    flake8 . --count --show-source --statistics
+          pip install flake8
+          flake8 . --count --show-source --statistics
