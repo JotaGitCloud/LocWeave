@@ -7,3 +7,5 @@ Frecuencia de despliegue esperada: el sistema requiere integraciones y despliegu
 Tamaño del equipo: Tres integrantes
 
 Esta combinación de alta frecuencia de cambios, equipo reducido de tres personas y necesidad de un proceso de release liviano hace que Trunk-Based Development sea la estrategia más adecuada para LocWeave frente a alternativas más pesadas como GitFlow.
+
+p
