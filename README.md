@@ -8,4 +8,10 @@ Tamaño del equipo: Tres integrantes
 
 Esta combinación de alta frecuencia de cambios, equipo reducido de tres personas y necesidad de un proceso de release liviano hace que Trunk-Based Development sea la estrategia más adecuada para LocWeave frente a alternativas más pesadas como GitFlow.
 
-p
+//MENSAJE DE GRUPO: Deben crearse su entorno propio para la mayoria de librerias usadas en el código, aquí la guia:
+1. python -m venv venv
+
+2. Si es en Git Bash o terminal normal: venv\Scripts\activate
+   Si es en terminal de PowerShell: .\venv\Scripts\Activate.ps1
+    
+3. pip install -r requirements.txt
