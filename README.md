@@ -1,5 +1,121 @@
 # LocWeave
 
+Aplicación de escritorio para **localizar (traducir) videojuegos indie** sin gastar dinero: funciona con un
+motor de traducción **local y gratuito** (sin cuentas ni claves de API). Está pensada para creadores con pocos
+recursos y construida con una arquitectura **Pipeline** de seis etapas.
+
+> Proyecto académico de la asignatura Arquitectura de Software.
+
+## Qué hace
+
+- Importa textos de juegos en **JSON, CSV, gettext (.po/.pot), .properties y Ren'Py (.rpy)**.
+- Detecta el idioma de origen (o lo eliges): español, inglés, japonés, chino, coreano, francés, alemán,
+  portugués, italiano y ruso. Pares como JP→EN o JP→ES funcionan usando el inglés como puente.
+- Protege variables y etiquetas (`{player}`, `%d`, `<b>…</b>`, `[nombre]`, `\n`) para que no se rompan.
+- **Glosario** por proyecto (nombres propios, objetos) y **memoria de traducción** que reutiliza tus
+  traducciones revisadas.
+- **Validación** automática: variables faltantes o sobrantes, saltos de línea, longitud, texto sin traducir.
+- Edición manual segmento por segmento y **exportación al formato original**.
+
+## Instalación
+
+### Opción A: ejecutable de Windows (doble clic, sin terminal)
+- **Descargarlo:** baja `LocWeave-windows.zip` desde la sección **Releases** del repositorio, descomprímelo y
+  abre `LocWeave.exe`.
+- **Compilarlo tú mismo:** haz doble clic en `build_exe.bat` (la primera vez tarda varios minutos). Al terminar
+  tendrás `dist\LocWeave\LocWeave.exe`; con clic derecho › *Enviar a* › *Escritorio* creas un acceso directo.
+- `Abrir_LocWeave.bat` abre la app sin dejar una consola abierta (usa el `.exe` si existe, o el código fuente).
+
+### Opción B: desde el código
+Requiere **Python 3.11 o 3.12** (64 bits). Para abrirla después sin terminal, usa `Abrir_LocWeave.bat`.
+
+```bash
+git clone <URL-DEL-REPOSITORIO>
+cd locweave
+python -m venv .venv
+.venv\Scripts\activate          # en Linux/Mac: source .venv/bin/activate
+pip install -r requirements.txt
+python main.py
+```
+
+## Uso rápido
+
+1. **Nuevo proyecto** → elige el archivo (hay ejemplos en `samples/`), el idioma de origen y el de destino.
+2. **Preparar idiomas** (solo la primera vez por par de idiomas; necesita internet para descargar los modelos).
+   Después todo funciona sin conexión.
+3. **Traducir pendientes**. Los segmentos con problemas quedan en amarillo («Revisar»).
+4. Corrige a mano en el panel inferior (`Ctrl+Enter` guarda). Lo que guardas sin errores pasa a la memoria de
+   traducción.
+5. **Exportar** genera el archivo traducido en el mismo formato.
+
+Modo línea de comandos (útil para automatizar):
+
+```bash
+python main.py import samples/dialogos_ja.json --tgt es
+python main.py translate 1 --provider argos      # o --provider mock para probar sin modelos
+python main.py show 1
+python main.py export 1 salida.es.json
+```
+
+## Arquitectura
+
+Pipeline de seis etapas que comparten un contexto (`app/services/pipeline.py`). Cada etapa es una clase
+independiente; el pipeline solo las ejecuta en orden.
+
+| # | Etapa | Responsabilidad |
+|---|-------|-----------------|
+| 1 | Ingesta | Lee el archivo con el manejador de su formato (`app/parsers/`) |
+| 2 | Segmentación | Detecta idioma, crea el proyecto y guarda los segmentos en SQLite |
+| 3 | Preprocesamiento | Memoria de traducción, glosario y protección de variables |
+| 4 | Traducción | Proveedor intercambiable (`app/providers/`): Argos local o demostración |
+| 5 | Validación | Restaura variables, aplica QA y guarda el resultado |
+| 6 | Exportación | Escribe el archivo traducido en el formato original |
+
+```
+main.py                 punto de entrada (GUI o CLI)
+app/
+  gui/                  interfaz Qt (PySide6): ventana, tema claro/oscuro, delegados, avisos, iconos
+  cli.py                línea de comandos
+  models.py             modelos de datos
+  database.py           persistencia SQLite
+  languages.py          idiomas y detección
+  parsers/              un manejador por formato (JSON, CSV, PO, properties, Ren'Py)
+  providers/            motores de traducción (Argos, demostración)
+  services/             pipeline, validación, protección de variables, fachada
+tests/                  pruebas unitarias (unittest)
+.github/workflows/      CI y generación del ejecutable
+```
+
+La interfaz es una capa reemplazable que solo usa `LocWeaveService` (ver `docs/ADR-004-capa-de-presentacion-qt.md`).
+
+Para agregar un formato: crea un `FormatHandler` en `app/parsers/` y regístralo en `__init__.py`.
+Para agregar un motor: implementa `TranslationProvider` en `app/providers/`.
+
+## Pruebas y ejecutable
+
+```bash
+python -m unittest discover -s tests -v          # pruebas del núcleo
+pip install -r requirements-dev.txt
+pyinstaller LocWeave.spec --noconfirm --clean    # genera dist/LocWeave/LocWeave.exe (o usa build_exe.bat)
+```
+
+Al subir una etiqueta `v*` (por ejemplo `git tag v0.1.0 && git push --tags`), GitHub Actions construye el
+ejecutable de Windows y lo publica en Releases.
+
+## Limitaciones conocidas
+
+- La calidad depende de los modelos de Argos Translate; es una traducción asistida, revísala antes de publicar.
+- El soporte de Ren'Py es básico (diálogos, menús, `_()`, `text`/`textbutton`); no interpreta bloques `python`.
+- Los textos con plurales de `.po` se omiten por ahora.
+
+---
+
+# Notas del equipo y guía de la versión anterior
+
+> Lo que sigue es el contenido original del README del equipo. La versión anterior de la aplicación (CustomTkinter + FastAPI + SQLAlchemy) se conserva en la carpeta `legacy/`; para ejecutarla, sitúate en `legacy/` e instala `legacy/requirements.txt`.
+
+# LocWeave
+
 Para LocWeave se eligió Trunk-Based Development por las siguientes razones:
 
 Frecuencia de despliegue esperada: el sistema requiere integraciones y despliegues frecuentes (nuevos extractores, mejoras en validaciones, soporte de formatos y ajustes de workflow). Trunk-Based permite mantener la rama principal siempre en estado desplegable e integrar cambios de forma continua, evitando la acumulación de trabajo que generan estrategias con ramas de larga duración.

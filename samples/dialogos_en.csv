@@ -1,0 +1,4 @@
+key,en
+GREET,"Welcome, {player}! You have %d coins."
+QUEST,"Bring me the <b>Blue Gem</b> from the cave."
+BYE,Goodbye!
