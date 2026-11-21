@@ -10,6 +10,9 @@ if sys.stderr is None:
 
 
 def run() -> int:
+    if len(sys.argv) > 1 and sys.argv[1] == "--selftest":
+        from app.selftest import run_selftest
+        return run_selftest(sys.argv[2] if len(sys.argv) > 2 else None)
     if len(sys.argv) > 1:
         from app.cli import main as cli_main
         return cli_main()

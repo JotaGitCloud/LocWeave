@@ -20,8 +20,11 @@ recursos y construida con una arquitectura **Pipeline** de seis etapas.
 ## Instalación
 
 ### Opción A: ejecutable de Windows (doble clic, sin terminal)
-- **Descargarlo:** baja `LocWeave-windows.zip` desde la sección **Releases** del repositorio, descomprímelo y
-  abre `LocWeave.exe`.
+- **Instalador (recomendado):** baja `LocWeave-Setup.exe` desde la sección **Releases**, ejecútalo y sigue los
+  pasos. No pide permisos de administrador.
+- **Versión portátil:** baja `LocWeave-windows.zip`, descomprímelo y abre `LocWeave.exe`.
+- Windows puede mostrar «Windows protegió su PC» porque el programa no tiene firma digital (cuesta dinero y este
+  es un proyecto académico). Pulsa **Más información › Ejecutar de todas formas**.
 - **Compilarlo tú mismo:** haz doble clic en `build_exe.bat` (la primera vez tarda varios minutos). Al terminar
   tendrás `dist\LocWeave\LocWeave.exe`; con clic derecho › *Enviar a* › *Escritorio* creas un acceso directo.
 - `Abrir_LocWeave.bat` abre la app sin dejar una consola abierta (usa el `.exe` si existe, o el código fuente).
@@ -101,6 +104,17 @@ pyinstaller LocWeave.spec --noconfirm --clean    # genera dist/LocWeave/LocWeave
 
 Al subir una etiqueta `v*` (por ejemplo `git tag v0.1.0 && git push --tags`), GitHub Actions construye el
 ejecutable de Windows y lo publica en Releases.
+
+## Tamaño y filosofía de bajo recurso
+
+LocWeave está pensado para equipos indie con pocos recursos: no cuesta nada, no pide cuentas y funciona sin
+internet. Para que la descarga sea lo más liviana posible:
+
+- Los modelos de idioma **no vienen incluidos**: se descargan una sola vez por par de idiomas, al pulsar
+  «Preparar idiomas».
+- El empaquetado excluye los módulos de Qt y archivos que no se usan (ver `LocWeave.spec`).
+- Cada compilación en GitHub Actions publica un **informe de tamaños** en el resumen del trabajo
+  (pestaña *Actions › Release (Windows)*), para seguir recortando con datos.
 
 ## Limitaciones conocidas
 

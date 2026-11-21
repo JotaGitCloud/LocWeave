@@ -21,6 +21,6 @@ jobs:
       # En Windows se instala PySide6 para correr también la prueba de humo de la interfaz (modo offscreen).
       - name: Instalar PySide6
         if: runner.os == 'Windows'
-        run: pip install "PySide6>=6.7,<7"
+        run: pip install "PySide6-Essentials>=6.7,<7"
       - name: Ejecutar pruebas
         run: python -m unittest discover -s tests -v
