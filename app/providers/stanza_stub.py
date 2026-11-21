@@ -1,12 +1,29 @@
-"""Sustituto mínimo de `stanza` para la variante liviana (sin PyTorch).
+"""Soporte de la variante liviana (sin PyTorch/stanza) para Argos Translate.
 
-Argos Translate importa `stanza` al cargarse, pero solo lo usa en un separador de oraciones alternativo que
-LocWeave no necesita (usa el de `minisbd`, basado en ONNX). Si `stanza` no está instalado, se registra un módulo
-vacío para que Argos pueda importarse; cualquier uso real de `stanza` da un AttributeError claro.
+Argos importa `stanza` al cargarse y, según el paquete de idioma, lo usa para separar oraciones. LocWeave no incluye
+`stanza` (pesa cientos de MB por PyTorch) y usa en su lugar el separador `minisbd` (ONNX, ya incluido).
+Si `stanza` no está instalado, `install_if_missing()`:
+  1. registra un módulo `stanza` vacío (cualquier uso real lanza AttributeError),
+  2. hace que Argos use `MiniSBDSentencizer` donde pediría `StanzaSentencizer`.
 """
+import importlib
 import importlib.util
 import sys
 import types
+
+
+def _prefer_minisbd() -> None:
+    """Redirige el separador de oraciones de Argos a minisbd (mejor esfuerzo; no debe romper nada)."""
+    try:
+        settings = importlib.import_module("argostranslate.settings")
+        chunk = getattr(settings, "ChunkType", None)
+        if chunk is not None and hasattr(chunk, "MINISBD"):
+            settings.chunk_type = chunk.MINISBD
+        sbd = importlib.import_module("argostranslate.sbd")
+        if hasattr(sbd, "MiniSBDSentencizer"):
+            sbd.StanzaSentencizer = sbd.MiniSBDSentencizer
+    except Exception:  # noqa: BLE001 - si algo falla, Argos mostrará su propio error al traducir
+        pass
 
 
 def install_if_missing() -> bool:
@@ -16,10 +33,10 @@ def install_if_missing() -> bool:
     stub = types.ModuleType("stanza")
 
     def _missing(name):
-        # AttributeError (no ImportError): herramientas como inspect/PySide consultan atributos como
-        # __wrapped__ y esperan AttributeError cuando no existen.
+        # AttributeError (no ImportError): inspect/PySide consultan atributos como __wrapped__.
         raise AttributeError(f"'stanza.{name}' no está incluido en la versión liviana de LocWeave (sin PyTorch).")
 
     stub.__getattr__ = _missing  # type: ignore[attr-defined]
     sys.modules["stanza"] = stub
+    _prefer_minisbd()
     return True

@@ -135,6 +135,11 @@ jobs:
             LocWeave-Setup-${{ matrix.variant }}.exe
           if-no-files-found: warn
 
+      - name: Verificar autoprueba
+        if: steps.selftest.outcome == 'failure'
+        shell: pwsh
+        run: throw "La autoprueba del ejecutable (${{ matrix.variant }}) falló, revisa el Summary."
+
       - name: Publicar release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
