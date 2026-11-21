@@ -3,7 +3,7 @@ name: Release (Windows)
 on:
   push:
     branches: ["qt-migration"]   # compila en cada subida a esta rama (solo genera archivos descargables)
-    tags: ["v*"]                      # una etiqueta v* además publica el Release
+    tags: ["v*"]                 # una etiqueta v* además publica el Release
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,18 @@ permissions:
 
 jobs:
   build:
+    name: build (${{ matrix.variant }})
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: full    # con PyTorch
+            slim: "0"
+          - variant: slim    # sin PyTorch (mucho más liviana)
+            slim: "1"
+    env:
+      LOCWEAVE_SLIM: ${{ matrix.slim }}
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +35,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Informe de dependencias instaladas
+        if: matrix.variant == 'full'
         shell: pwsh
         run: |
           $purelib = python -c "import sysconfig; print(sysconfig.get_paths()['purelib'])"
@@ -35,8 +47,17 @@ jobs:
           '```' | Add-Content $env:GITHUB_STEP_SUMMARY
           ($rows | Format-Table -AutoSize | Out-String) | Add-Content $env:GITHUB_STEP_SUMMARY
           '```' | Add-Content $env:GITHUB_STEP_SUMMARY
-          $torch = if (Test-Path (Join-Path $purelib "torch")) { "SÍ" } else { "no" }
-          "PyTorch instalado: **$torch**" | Add-Content $env:GITHUB_STEP_SUMMARY
+
+      - name: Importación sin congelar (diagnóstico)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $r = python -c "import sentencepiece, argostranslate.package, argostranslate.translate; print('OK')" 2>&1 | Out-String
+          "## [${{ matrix.variant }}] Importación de Argos sin congelar" | Add-Content $env:GITHUB_STEP_SUMMARY
+          '```' | Add-Content $env:GITHUB_STEP_SUMMARY
+          $r | Add-Content $env:GITHUB_STEP_SUMMARY
+          '```' | Add-Content $env:GITHUB_STEP_SUMMARY
+          if ($LASTEXITCODE -ne 0) { throw "La importación de Argos falla incluso sin congelar" }
 
       - name: Pruebas
         run: python -m unittest discover -s tests
@@ -44,19 +65,34 @@ jobs:
       - name: Crear ejecutable
         run: pyinstaller LocWeave.spec --noconfirm --clean
 
-      - name: Autoprueba del ejecutable
+      - name: Autoprueba del ejecutable (incluye traducción real)
         id: selftest
         continue-on-error: true
+        timeout-minutes: 20
         shell: pwsh
         run: |
           $out = Join-Path $env:RUNNER_TEMP "selftest.txt"
-          $p = Start-Process -FilePath "dist\LocWeave\LocWeave.exe" -ArgumentList "--selftest", $out -Wait -PassThru
+          $p = Start-Process -FilePath "dist\LocWeave\LocWeave.exe" -ArgumentList "--selftest", $out, "--real" -Wait -PassThru
+          "## [${{ matrix.variant }}] Autoprueba del ejecutable" | Add-Content $env:GITHUB_STEP_SUMMARY
+          '```' | Add-Content $env:GITHUB_STEP_SUMMARY
           if (Test-Path $out) { Get-Content $out; Get-Content $out | Add-Content $env:GITHUB_STEP_SUMMARY }
+          '```' | Add-Content $env:GITHUB_STEP_SUMMARY
           if ($p.ExitCode -ne 0) { throw "La autoprueba del ejecutable falló (código $($p.ExitCode))" }
+
+      - name: Diagnóstico de DLL faltantes
+        if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $r = python tools/diag_dlls.py dist\LocWeave\_internal sentencepiece ctranslate2 onnxruntime 2>&1 | Out-String
+          "## [${{ matrix.variant }}] DLL faltantes" | Add-Content $env:GITHUB_STEP_SUMMARY
+          '```' | Add-Content $env:GITHUB_STEP_SUMMARY
+          $r | Add-Content $env:GITHUB_STEP_SUMMARY
+          '```' | Add-Content $env:GITHUB_STEP_SUMMARY
 
       - name: Comprimir (zip)
         shell: pwsh
-        run: 7z a -tzip -mx=9 LocWeave-windows.zip .\dist\LocWeave | Out-Null
+        run: 7z a -tzip -mx=9 "LocWeave-windows-${{ matrix.variant }}.zip" .\dist\LocWeave | Out-Null
 
       - name: Crear instalador (Setup.exe)
         continue-on-error: true
@@ -65,24 +101,26 @@ jobs:
           choco install innosetup -y --no-progress
           $version = if ($env:GITHUB_REF_TYPE -eq "tag") { $env:GITHUB_REF_NAME.TrimStart("v") } else { "0.1.0" }
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" installer\LocWeave.iss
-          if (Test-Path installer_out\LocWeave-Setup.exe) { Move-Item installer_out\LocWeave-Setup.exe LocWeave-Setup.exe }
+          if (Test-Path installer_out\LocWeave-Setup.exe) { Move-Item installer_out\LocWeave-Setup.exe "LocWeave-Setup-${{ matrix.variant }}.exe" }
 
       - name: Informe de tamaños
         if: always()
         shell: pwsh
         run: |
           function MB($path) { [math]::Round(((Get-ChildItem $path -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum) / 1MB, 1) }
+          $v = "${{ matrix.variant }}"
           $s = $env:GITHUB_STEP_SUMMARY
-          "## Tamaños de LocWeave" | Add-Content $s
+          "## [$v] Tamaños de LocWeave" | Add-Content $s
           if (Test-Path dist\LocWeave) { "- App descomprimida: **$(MB 'dist\LocWeave') MB**" | Add-Content $s }
-          if (Test-Path LocWeave-windows.zip) { "- LocWeave-windows.zip: **$([math]::Round((Get-Item LocWeave-windows.zip).Length / 1MB, 1)) MB**" | Add-Content $s }
-          if (Test-Path LocWeave-Setup.exe) { "- LocWeave-Setup.exe: **$([math]::Round((Get-Item LocWeave-Setup.exe).Length / 1MB, 1)) MB**" | Add-Content $s }
-          else { "- LocWeave-Setup.exe: no se generó (el zip sí está disponible)" | Add-Content $s }
+          if (Test-Path "LocWeave-windows-$v.zip") { "- LocWeave-windows-$v.zip: **$([math]::Round((Get-Item "LocWeave-windows-$v.zip").Length / 1MB, 1)) MB**" | Add-Content $s }
+          if (Test-Path "LocWeave-Setup-$v.exe") { "- LocWeave-Setup-$v.exe: **$([math]::Round((Get-Item "LocWeave-Setup-$v.exe").Length / 1MB, 1)) MB**" | Add-Content $s }
+          else { "- LocWeave-Setup-$v.exe: no se generó (el zip sí está disponible)" | Add-Content $s }
           if (Test-Path dist\LocWeave) {
-            $rows = Get-ChildItem dist\LocWeave -Recurse -Directory | Where-Object { $_.FullName.Split("\").Count -le ((Resolve-Path dist\LocWeave).Path.Split("\").Count + 2) } | ForEach-Object {
-              [pscustomobject]@{ Carpeta = $_.FullName.Replace((Resolve-Path dist\LocWeave).Path, ""); MB = MB $_.FullName }
-            } | Sort-Object MB -Descending | Select-Object -First 15
-            "### Lo más pesado dentro de la app" | Add-Content $s
+            $base = (Resolve-Path dist\LocWeave).Path
+            $rows = Get-ChildItem dist\LocWeave -Recurse -Directory | Where-Object { $_.FullName.Split("\").Count -le ($base.Split("\").Count + 2) } | ForEach-Object {
+              [pscustomobject]@{ Carpeta = $_.FullName.Replace($base, ""); MB = MB $_.FullName }
+            } | Sort-Object MB -Descending | Select-Object -First 12
+            "### [$v] Lo más pesado dentro de la app" | Add-Content $s
             '```' | Add-Content $s
             ($rows | Format-Table -AutoSize | Out-String) | Add-Content $s
             '```' | Add-Content $s
@@ -91,10 +129,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: LocWeave-windows
+          name: LocWeave-windows-${{ matrix.variant }}
           path: |
-            LocWeave-windows.zip
-            LocWeave-Setup.exe
+            LocWeave-windows-${{ matrix.variant }}.zip
+            LocWeave-Setup-${{ matrix.variant }}.exe
           if-no-files-found: warn
 
       - name: Publicar release
@@ -103,5 +141,5 @@ jobs:
         with:
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            LocWeave-windows.zip
-            LocWeave-Setup.exe
+            LocWeave-windows-${{ matrix.variant }}.zip
+            LocWeave-Setup-${{ matrix.variant }}.exe

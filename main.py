@@ -12,7 +12,8 @@ if sys.stderr is None:
 def run() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "--selftest":
         from app.selftest import run_selftest
-        return run_selftest(sys.argv[2] if len(sys.argv) > 2 else None)
+        report = sys.argv[2] if len(sys.argv) > 2 and not sys.argv[2].startswith('--') else None
+        return run_selftest(report, real='--real' in sys.argv)
     if len(sys.argv) > 1:
         from app.cli import main as cli_main
         return cli_main()
