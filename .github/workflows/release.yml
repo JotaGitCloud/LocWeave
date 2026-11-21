@@ -2,7 +2,8 @@ name: Release (Windows)
 
 on:
   push:
-    tags: ["v*"]
+    branches: ["qt-migration"]   # compila en cada subida a esta rama (solo genera archivos descargables)
+    tags: ["v*"]                      # una etiqueta v* además publica el Release
   workflow_dispatch:
 
 permissions:
@@ -100,6 +101,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             LocWeave-windows.zip
             LocWeave-Setup.exe
