@@ -132,6 +132,7 @@ jobs:
             ($rows | Format-Table -AutoSize | Out-String) | Add-Content $s
             '```' | Add-Content $s
           }
+          Get-Content $s | Write-Host   # copia del informe en el registro del paso (legible también con gh)
 
       - uses: actions/upload-artifact@v4
         if: always()
