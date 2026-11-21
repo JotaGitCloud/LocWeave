@@ -14,6 +14,9 @@ class ArgosProvider(TranslationProvider):
 
     @staticmethod
     def _import():
+        from .stanza_stub import install_if_missing
+
+        install_if_missing()   # variante liviana: Argos importa stanza pero no lo necesita
         try:
             import argostranslate.package as package
             import argostranslate.translate as translate

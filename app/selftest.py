@@ -56,6 +56,9 @@ def run_selftest(report_path=None, real=False) -> int:
         service.export(project.id, os.path.join(folder, "out.json"))
 
     def argos():
+        from app.providers.stanza_stub import install_if_missing
+
+        install_if_missing()
         import argostranslate.package  # noqa: F401
         import argostranslate.translate  # noqa: F401
 
