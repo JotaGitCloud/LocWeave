@@ -2,7 +2,7 @@
 
 Argos Translate importa `stanza` al cargarse, pero solo lo usa en un separador de oraciones alternativo que
 LocWeave no necesita (usa el de `minisbd`, basado en ONNX). Si `stanza` no está instalado, se registra un módulo
-vacío para que Argos pueda importarse; cualquier uso real de `stanza` da un error claro.
+vacío para que Argos pueda importarse; cualquier uso real de `stanza` da un AttributeError claro.
 """
 import importlib.util
 import sys
@@ -16,7 +16,9 @@ def install_if_missing() -> bool:
     stub = types.ModuleType("stanza")
 
     def _missing(name):
-        raise ImportError(f"'stanza.{name}' no está incluido en la versión liviana de LocWeave (sin PyTorch).")
+        # AttributeError (no ImportError): herramientas como inspect/PySide consultan atributos como
+        # __wrapped__ y esperan AttributeError cuando no existen.
+        raise AttributeError(f"'stanza.{name}' no está incluido en la versión liviana de LocWeave (sin PyTorch).")
 
     stub.__getattr__ = _missing  # type: ignore[attr-defined]
     sys.modules["stanza"] = stub

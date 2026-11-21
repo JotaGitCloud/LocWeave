@@ -13,8 +13,9 @@ class StanzaStubTests(unittest.TestCase):
                 self.assertTrue(stanza_stub.install_if_missing())
                 self.assertFalse(stanza_stub.install_if_missing())
             stub = sys.modules["stanza"]
-            with self.assertRaises(ImportError):
+            with self.assertRaises(AttributeError):
                 getattr(stub, "Pipeline")
+            self.assertFalse(hasattr(stub, "__wrapped__"))   # inspect.unwrap lo consulta
         finally:
             sys.modules.pop("stanza", None)
             if saved is not None:
