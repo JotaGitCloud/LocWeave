@@ -33,6 +33,16 @@ for package in ("argostranslate", "ctranslate2", "sentencepiece", "sacremoses", 
         binaries += b
         hiddenimports += h
 
+# Ruedas "delvewheel" (p. ej. sentencepiece): sus DLL viven en una carpeta hermana "<paquete>.libs" que
+# PyInstaller no detecta y que el paquete busca en tiempo de ejecución (causa del fallo _sentencepiece).
+for package in ("sentencepiece", "ctranslate2", "onnxruntime", "numpy", "blis", "thinc", "spacy"):
+    spec_ = importlib.util.find_spec(package)
+    if spec_ and spec_.submodule_search_locations:
+        libs_dir = os.path.join(os.path.dirname(list(spec_.submodule_search_locations)[0]), package + ".libs")
+        if os.path.isdir(libs_dir):
+            for name in os.listdir(libs_dir):
+                binaries.append((os.path.join(libs_dir, name), package + ".libs"))
+
 # Dependencias muy pesadas que, según la versión de Argos, pueden estar presentes: solo lo imprescindible.
 if not SLIM:
     if present("stanza"):
