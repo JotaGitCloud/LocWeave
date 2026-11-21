@@ -20,9 +20,9 @@ recursos y construida con una arquitectura **Pipeline** de seis etapas.
 ## Instalación
 
 ### Opción A: ejecutable de Windows (doble clic, sin terminal)
-- **Instalador (recomendado):** baja `LocWeave-Setup-slim.exe` (unos 65 MB) desde la sección **Releases**,
+- **Instalador (recomendado):** baja `LocWeave-Setup-slim.exe` (unos 52 MB) desde la sección **Releases**,
   ejecútalo y sigue los pasos. No pide permisos de administrador.
-- **Versión portátil:** baja `LocWeave-windows-slim.zip` (unos 100 MB), descomprímelo y abre `LocWeave.exe`.
+- **Versión portátil:** baja `LocWeave-windows-slim.zip` (unos 80 MB), descomprímelo y abre `LocWeave.exe`.
 - Existe también la variante `full` (con PyTorch, unos 240 MB): hace lo mismo y solo tiene sentido si necesitas
   los separadores de oraciones de `stanza`. Para el uso normal elige **slim**.
 - Windows puede mostrar «Windows protegió su PC» porque el programa no tiene firma digital (cuesta dinero y este
@@ -114,8 +114,8 @@ internet. Para que la descarga sea lo más liviana posible:
 
 - Los modelos de idioma **no vienen incluidos**: se descargan una sola vez por par de idiomas, al pulsar
   «Preparar idiomas».
-- La variante **slim** (la recomendada) no incluye PyTorch, `stanza` ni `spacy`: usa el separador de oraciones
-  `minisbd` (ONNX). Resultado: instalador de ~65 MB frente a ~164 MB de la variante `full`, con la misma
+- La variante **slim** (la recomendada) no incluye PyTorch, `stanza` ni `spacy` (la app ocupa ~224 MB instalada frente a ~689 MB): usa el separador de oraciones
+  `minisbd` (ONNX). Resultado: instalador de ~52 MB frente a ~164 MB de la variante `full`, con la misma
   traducción (la compilación prueba una traducción real en→es dentro del `.exe` en ambas).
 - El empaquetado excluye los módulos de Qt y archivos que no se usan (ver `LocWeave.spec`).
 - Cada compilación en GitHub Actions publica un **informe de tamaños** en el resumen del trabajo
