@@ -26,17 +26,25 @@ def _prefer_minisbd() -> None:
         pass
 
 
-def install_if_missing() -> bool:
-    """Registra el sustituto si `stanza` no existe. Devuelve True si lo registró."""
-    if "stanza" in sys.modules or importlib.util.find_spec("stanza") is not None:
-        return False
-    stub = types.ModuleType("stanza")
+def _make_stub(name: str) -> types.ModuleType:
+    stub = types.ModuleType(name)
 
-    def _missing(name):
+    def _missing(attr):
         # AttributeError (no ImportError): inspect/PySide consultan atributos como __wrapped__.
-        raise AttributeError(f"'stanza.{name}' no está incluido en la versión liviana de LocWeave (sin PyTorch).")
+        raise AttributeError(f"'{name}.{attr}' no está incluido en la versión liviana de LocWeave.")
 
     stub.__getattr__ = _missing  # type: ignore[attr-defined]
-    sys.modules["stanza"] = stub
-    _prefer_minisbd()
-    return True
+    return stub
+
+
+def install_if_missing() -> bool:
+    """Registra sustitutos de `stanza` (y `spacy`) si no existen. Devuelve True si registró alguno."""
+    registered = False
+    for name in ("stanza", "spacy"):
+        if name in sys.modules or importlib.util.find_spec(name) is not None:
+            continue
+        sys.modules[name] = _make_stub(name)
+        registered = True
+    if registered:
+        _prefer_minisbd()
+    return registered

@@ -26,7 +26,10 @@ def present(name):
 
 
 # Núcleo del motor de traducción: se incluye completo (datos, DLL y submódulos).
-for package in ("argostranslate", "ctranslate2", "sentencepiece", "sacremoses", "minisbd", "spacy"):
+core_packages = ["argostranslate", "ctranslate2", "sentencepiece", "sacremoses", "minisbd"]
+if not SLIM:
+    core_packages.append("spacy")
+for package in core_packages:
     if present(package):
         d, b, h = collect_all(package)
         datas += d
@@ -35,7 +38,7 @@ for package in ("argostranslate", "ctranslate2", "sentencepiece", "sacremoses", 
 
 # Ruedas "delvewheel" (p. ej. sentencepiece): sus DLL viven en una carpeta hermana "<paquete>.libs" que
 # PyInstaller no detecta y que el paquete busca en tiempo de ejecución (causa del fallo _sentencepiece).
-for package in ("sentencepiece", "ctranslate2", "onnxruntime", "numpy", "blis", "thinc", "spacy"):
+for package in ("sentencepiece", "ctranslate2", "onnxruntime", "numpy"):
     spec_ = importlib.util.find_spec(package)
     if spec_ and spec_.submodule_search_locations:
         libs_dir = os.path.join(os.path.dirname(list(spec_.submodule_search_locations)[0]), package + ".libs")
@@ -58,7 +61,8 @@ excludes = ["tkinter", "matplotlib", "IPython", "notebook", "pytest",
             "PySide6.QtBluetooth", "PySide6.QtSql", "PySide6.QtTest", "PySide6.QtPdf", "PySide6.QtPdfWidgets",
             "PySide6.QtDesigner", "PySide6.QtHelp"]
 if SLIM:  # PyTorch y todo lo que solo existe por él (unos 460 MB)
-    excludes += ["torch", "torchgen", "functorch", "stanza", "sympy", "mpmath", "networkx", "triton"]
+    excludes += ["torch", "torchgen", "functorch", "stanza", "sympy", "mpmath", "networkx", "triton",
+                 "spacy", "thinc", "blis"]   # spacy/thinc/blis: solo para un separador de oraciones que no usamos
 
 # Archivos que no hacen falta para ejecutar: cabeceras, librerías de enlace, pruebas, traducciones de Qt, etc.
 DROP_SUFFIXES = (".lib", ".pdb", ".h", ".hpp", ".cuh", ".cmake", ".pyi", ".c", ".cpp", ".pxd")

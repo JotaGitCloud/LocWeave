@@ -120,6 +120,13 @@ jobs:
             $rows = Get-ChildItem dist\LocWeave -Recurse -Directory | Where-Object { $_.FullName.Split("\").Count -le ($base.Split("\").Count + 2) } | ForEach-Object {
               [pscustomobject]@{ Carpeta = $_.FullName.Replace($base, ""); MB = MB $_.FullName }
             } | Sort-Object MB -Descending | Select-Object -First 12
+            $files = Get-ChildItem dist\LocWeave -Recurse -File | Sort-Object Length -Descending | Select-Object -First 25 | ForEach-Object {
+              [pscustomobject]@{ Archivo = $_.FullName.Replace($base, ""); MB = [math]::Round($_.Length / 1MB, 1) }
+            }
+            "### [$v] Los 25 archivos más pesados" | Add-Content $s
+            '```' | Add-Content $s
+            ($files | Format-Table -AutoSize | Out-String) | Add-Content $s
+            '```' | Add-Content $s
             "### [$v] Lo más pesado dentro de la app" | Add-Content $s
             '```' | Add-Content $s
             ($rows | Format-Table -AutoSize | Out-String) | Add-Content $s
