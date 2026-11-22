@@ -371,3 +371,99 @@ class WeaveMap(QWidget):
                 painter.setPen(QPen(QColor(p["text"]), width))
                 painter.drawRoundedRect(rect, radius + 1, radius + 1)
                 painter.setPen(Qt.NoPen)
+
+
+class GlowCard(QFrame):
+    """Tarjeta con fondo de panel, borde fino y un brillo de color en una esquina."""
+
+    def __init__(self, parent=None, corner: str = "tr", strength: float = 1.0):
+        super().__init__(parent)
+        self.setObjectName("GlowCard")
+        self._corner, self._strength = corner, strength
+        theme.changed.connect(self.update)
+
+    def paintEvent(self, _event):
+        p = theme.p
+        dark = p["name"] == "dark"
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        path = QPainterPath()
+        path.addRoundedRect(rect, 14, 14)
+        painter.fillPath(path, QColor(p["panel"]))
+        painter.save()
+        painter.setClipPath(path)
+        x = rect.right() if "r" in self._corner else rect.left()
+        y = rect.top() if "t" in self._corner else rect.bottom()
+        _glow(painter, QPointF(x, y), max(rect.width() * 0.45, 220), p["accent"],
+              (0.16 if dark else 0.10) * self._strength)
+        _glow(painter, QPointF(rect.width() - x, rect.height() - y), 180, VIOLET,
+              (0.07 if dark else 0.05) * self._strength)
+        painter.restore()
+        edge = QLinearGradient(rect.topLeft(), rect.bottomRight())
+        edge.setColorAt(0.0, qcolor(p["accent"], 0.38 if dark else 0.30))
+        edge.setColorAt(0.5, qcolor(p["border"], 0.9))
+        edge.setColorAt(1.0, qcolor(VIOLET, 0.28 if dark else 0.22))
+        painter.setBrush(Qt.NoBrush)
+        painter.setPen(QPen(QBrush(edge), 1.0))
+        painter.drawPath(path)
+
+
+class ProgressRing(QWidget):
+    """Anillo de avance con degradado de marca y porcentaje al centro."""
+
+    def __init__(self, size: int = 92, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(size, size)
+        self._value = 0.0
+        self._from = 0.0
+        self._to = 0.0
+        self._anim = QVariantAnimation(self)
+        self._anim.setStartValue(0.0)
+        self._anim.setEndValue(1.0)
+        self._anim.setDuration(700)
+        self._anim.setEasingCurve(QEasingCurve.OutCubic)
+        self._anim.valueChanged.connect(self._tick)
+        theme.changed.connect(self.update)
+
+    def set_value(self, fraction: float) -> None:
+        self._from, self._to = self._value, max(0.0, min(1.0, fraction))
+        self._anim.stop()
+        self._anim.start()
+
+    def settle(self) -> None:
+        """Termina la animación al instante (capturas y pruebas)."""
+        self._anim.stop()
+        self._value = self._to
+        self.update()
+
+    def _tick(self, t) -> None:
+        self._value = self._from + (self._to - self._from) * float(t)
+        self.update()
+
+    def paintEvent(self, _event):
+        p = theme.p
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        thick = 9.0
+        rect = QRectF(self.rect()).adjusted(thick, thick, -thick, -thick)
+        painter.setBrush(Qt.NoBrush)
+        painter.setPen(QPen(QColor(p["track"]), thick, Qt.SolidLine, Qt.RoundCap))
+        painter.drawEllipse(rect)
+        if self._value > 0.003:
+            grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
+            grad.setColorAt(0.0, QColor(p["accent_hover"]))
+            grad.setColorAt(1.0, QColor(mix(p["accent"], VIOLET, 0.7)))
+            painter.setPen(QPen(QBrush(grad), thick, Qt.SolidLine, Qt.RoundCap))
+            painter.drawArc(rect, 90 * 16, int(-self._value * 360 * 16))
+        font = QFont(self.font())
+        font.setPointSizeF(15)
+        font.setWeight(QFont.DemiBold)
+        painter.setFont(font)
+        painter.setPen(QColor(p["text"]))
+        painter.drawText(QRectF(self.rect()).adjusted(0, -7, 0, -7), Qt.AlignCenter, f"{round(self._value * 100)}%")
+        font.setPointSizeF(8)
+        font.setWeight(QFont.Normal)
+        painter.setFont(font)
+        painter.setPen(QColor(p["muted"]))
+        painter.drawText(QRectF(self.rect()).adjusted(0, 22, 0, 22), Qt.AlignCenter, "avance")

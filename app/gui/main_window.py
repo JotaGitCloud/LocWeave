@@ -21,7 +21,8 @@ from ..services.placeholders import extract_placeholders
 from ..services.project_service import LocWeaveService
 from ..services.validation import has_errors, validate
 from .delegates import PROJECT_ROLE, ProjectDelegate, SegmentDelegate, SegmentTableModel, rich_html
-from .decor import AuroraBackground, FeatureCard, GradientTitle, HeroLogo, Pill, SidebarFrame, StatsLegend, WeaveMap
+from .decor import (AuroraBackground, FeatureCard, GlowCard, GradientTitle, HeroLogo, Pill, ProgressRing, SidebarFrame,
+                    StatsLegend, WeaveMap)
 from .dialogs import GlossaryDialog, NewProjectDialog, fill_languages
 from .platform_utils import set_app_id, set_dark_titlebar
 from .resources import assets_dir, samples_dir
@@ -198,7 +199,7 @@ class MainWindow(QMainWindow):
         return page
 
     def _build_project_page(self) -> QWidget:
-        page = QWidget()
+        page = AuroraBackground()
         v = QVBoxLayout(page)
         v.setContentsMargins(28, 22, 28, 14)
         v.setSpacing(12)
@@ -223,14 +224,29 @@ class MainWindow(QMainWindow):
             top.addWidget(w)
         v.addLayout(top)
 
-        self.bar = SegmentedBar()
+        self.bar = SegmentedBar()   # reemplazado por el anillo y el tejido
+        self.bar.hide()
         self.stats_label = StatsLegend()
         self.weave = WeaveMap()
         self.weave.setToolTip("Cada hilo es un texto. Haz clic para ir a él.")
         self.weave.rowClicked.connect(self._jump_to_row)
-        v.addWidget(self.bar)
-        v.addWidget(self.stats_label)
-        v.addWidget(self.weave)
+        self.ring = ProgressRing(92)
+        overview = GlowCard(corner="tr")
+        ov = QHBoxLayout(overview)
+        ov.setContentsMargins(20, 14, 20, 14)
+        ov.setSpacing(20)
+        left = QVBoxLayout()
+        left.setSpacing(10)
+        head = QHBoxLayout()
+        head.addWidget(_label("Tejido del proyecto", "section"))
+        head.addStretch(1)
+        left.addLayout(head)
+        left.addWidget(self.stats_label)
+        left.addWidget(self.weave)
+        left.addStretch(1)
+        ov.addLayout(left, 1)
+        ov.addWidget(self.ring, 0, Qt.AlignVCenter)
+        v.addWidget(overview)
 
         # --- barra de herramientas
         tools = QHBoxLayout()
@@ -274,8 +290,7 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Vertical)
         splitter.setChildrenCollapsible(False)
         splitter.setHandleWidth(10)
-        table_card = QFrame()
-        table_card.setObjectName("Card")
+        table_card = GlowCard(corner="tl", strength=0.6)
         tv = QVBoxLayout(table_card)
         tv.setContentsMargins(8, 4, 8, 8)
         self.model = SegmentTableModel(self)
@@ -305,8 +320,7 @@ class MainWindow(QMainWindow):
         tv.addWidget(self.table)
         splitter.addWidget(table_card)
 
-        self.editor_card = QFrame()
-        self.editor_card.setObjectName("Card")
+        self.editor_card = GlowCard(corner="br", strength=0.7)
         grid = QGridLayout(self.editor_card)
         grid.setContentsMargins(18, 14, 18, 14)
         grid.setHorizontalSpacing(0)
@@ -595,6 +609,8 @@ class MainWindow(QMainWindow):
         reviewed, translated = s.get("reviewed", 0), s.get("translated", 0)
         review, pending = s.get("needs_review", 0), s.get("pending", 0)
         self.bar.set_counts(reviewed, translated, review, pending)
+        done = (translated + reviewed) / s["total"] if s["total"] else 0.0
+        self.ring.set_value(done)
         self.stats_label.set_counts(s["total"], {"reviewed": reviewed, "translated": translated,
                                                  "needs_review": review, "pending": pending})
 

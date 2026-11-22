@@ -97,6 +97,7 @@ def run_selftest(report_path=None, real=False, screenshots=None) -> int:
             window.table.selectRow(2)
             window.weave._anim.stop()   # sin esperar la animación de entrada
             window.weave._t = 1.0
+            window.ring.settle()
             app.processEvents()
             app.processEvents()
             save_png(window, os.path.join(screenshots, f"{mode}-proyecto.png"))
