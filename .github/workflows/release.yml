@@ -72,12 +72,25 @@ jobs:
         shell: pwsh
         run: |
           $out = Join-Path $env:RUNNER_TEMP "selftest.txt"
-          $p = Start-Process -FilePath "dist\LocWeave\LocWeave.exe" -ArgumentList "--selftest", $out, "--real" -Wait -PassThru
+          $shots = Join-Path $env:RUNNER_TEMP "shots"
+          $p = Start-Process -FilePath "dist\LocWeave\LocWeave.exe" -ArgumentList "--selftest", $out, "--real", "--screenshots", $shots -Wait -PassThru
           "## [${{ matrix.variant }}] Autoprueba del ejecutable" | Add-Content $env:GITHUB_STEP_SUMMARY
           '```' | Add-Content $env:GITHUB_STEP_SUMMARY
           if (Test-Path $out) { Get-Content $out; Get-Content $out | Add-Content $env:GITHUB_STEP_SUMMARY }
           '```' | Add-Content $env:GITHUB_STEP_SUMMARY
           if ($p.ExitCode -ne 0) { throw "La autoprueba del ejecutable falló (código $($p.ExitCode))" }
+
+      - name: Capturas de la interfaz (en el registro, para revisión)
+        if: always() && matrix.variant == 'slim'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP "shots"
+          if (Test-Path $dir) {
+            Get-ChildItem $dir -Filter *.png | ForEach-Object {
+              "SHOT|$($_.Name)|" + [Convert]::ToBase64String([IO.File]::ReadAllBytes($_.FullName))
+            }
+          }
 
       - name: Diagnóstico de DLL faltantes
         if: always()

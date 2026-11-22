@@ -21,6 +21,7 @@ from ..services.placeholders import extract_placeholders
 from ..services.project_service import LocWeaveService
 from ..services.validation import has_errors, validate
 from .delegates import PROJECT_ROLE, ProjectDelegate, SegmentDelegate, SegmentTableModel, rich_html
+from .decor import AuroraBackground, FeatureCard, GradientTitle, HeroLogo, Pill, SidebarFrame
 from .dialogs import GlossaryDialog, NewProjectDialog, fill_languages
 from .platform_utils import set_app_id, set_dark_titlebar
 from .resources import assets_dir
@@ -102,8 +103,7 @@ class MainWindow(QMainWindow):
 
     # ================================================================ construcción
     def _build_sidebar(self) -> QFrame:
-        side = QFrame()
-        side.setObjectName("Sidebar")
+        side = SidebarFrame()
         side.setFixedWidth(268)
         v = QVBoxLayout(side)
         v.setContentsMargins(16, 24, 16, 18)
@@ -145,48 +145,43 @@ class MainWindow(QMainWindow):
         return side
 
     def _build_empty_page(self) -> QWidget:
-        page = QWidget()
+        page = AuroraBackground()
         outer = QVBoxLayout(page)
         outer.addStretch(1)
         col = QVBoxLayout()
         col.setAlignment(Qt.AlignHCenter)
-        col.setSpacing(14)
-        logo = LogoWidget(64)
-        col.addWidget(logo, 0, Qt.AlignHCenter)
-        hero = _label("Lleva tu juego a más idiomas", "hero")
-        hero.setAlignment(Qt.AlignCenter)
+        col.setSpacing(12)
+        col.addWidget(HeroLogo(120), 0, Qt.AlignHCenter)
+        col.addWidget(GradientTitle("Lleva tu juego a más idiomas", 27), 0, Qt.AlignHCenter)
         sub = _label("Importa los textos, tradúcelos con un motor local y gratuito, revisa y exporta\n"
                      "al formato original. Sin cuentas, sin costos.", muted=True)
         sub.setAlignment(Qt.AlignCenter)
-        col.addWidget(hero)
         col.addWidget(sub)
+        pills = QHBoxLayout()
+        pills.setSpacing(8)
+        pills.setAlignment(Qt.AlignHCenter)
+        for text in ("100 % local", "Gratis", "Sin cuenta", "Funciona sin internet"):
+            pills.addWidget(Pill(text))
+        col.addSpacing(2)
+        col.addLayout(pills)
         start = IconButton("Crear mi primer proyecto", "plus", "primary")
-        start.setMinimumHeight(44)
-        start.setMinimumWidth(240)
+        start.setMinimumHeight(46)
+        start.setMinimumWidth(260)
         start.clicked.connect(self._new_project)
-        col.addSpacing(8)
+        col.addSpacing(10)
         col.addWidget(start, 0, Qt.AlignHCenter)
-        col.addSpacing(18)
+        col.addSpacing(20)
 
         steps = QHBoxLayout()
         steps.setSpacing(16)
         steps.setAlignment(Qt.AlignHCenter)
-        for number, title, text in (
-                ("1", "Importa", "JSON, CSV, .po, .properties\ny scripts de Ren'Py"),
-                ("2", "Traduce", "Motor local, sin internet\nuna vez instalados los idiomas"),
-                ("3", "Revisa y exporta", "Variables protegidas,\nglosario y memoria propios")):
-            card = QFrame()
-            card.setObjectName("StepCard")
-            card.setFixedSize(230, 128)
-            cv = QVBoxLayout(card)
-            cv.setContentsMargins(20, 18, 20, 18)
-            cv.addWidget(_label(number, "step"))
-            cv.addWidget(_label(title, "section"))
-            cv.addWidget(_label(text, "small"))
-            cv.addStretch(1)
-            steps.addWidget(card)
+        for number, icon_name, title, text in (
+                ("01", "upload", "Importa", "JSON, CSV, .po, .properties y scripts de Ren'Py"),
+                ("02", "refresh", "Traduce", "Motor local, sin internet una vez instalados los idiomas"),
+                ("03", "check", "Revisa y exporta", "Variables protegidas, glosario y memoria propios")):
+            steps.addWidget(FeatureCard(number, icon_name, title, text))
         col.addLayout(steps)
-        col.addSpacing(10)
+        col.addSpacing(8)
         col.addWidget(_label("También puedes arrastrar un archivo a esta ventana.", "small"), 0, Qt.AlignHCenter)
         outer.addLayout(col)
         outer.addStretch(2)

@@ -13,7 +13,8 @@ def run() -> int:
     if len(sys.argv) > 1 and sys.argv[1] == "--selftest":
         from app.selftest import run_selftest
         report = sys.argv[2] if len(sys.argv) > 2 and not sys.argv[2].startswith('--') else None
-        return run_selftest(report, real='--real' in sys.argv)
+        shots = sys.argv[sys.argv.index("--screenshots") + 1] if "--screenshots" in sys.argv else None
+        return run_selftest(report, real="--real" in sys.argv, screenshots=shots)
     if len(sys.argv) > 1:
         from app.cli import main as cli_main
         return cli_main()

@@ -65,11 +65,17 @@ def build_qss(p: dict) -> str:
     chevron = _chevron_file(p)
     return f"""
 QMainWindow, QDialog {{ background: {p['bg']}; }}
-QFrame#Sidebar {{ background: {p['panel']}; border: none; }}
 QFrame#Card {{ background: {p['panel']}; border-radius: 12px; border: none; }}
 QFrame#Group {{ background: {p['raised']}; border: 1px solid {p['border']}; border-radius: 10px; }}
 QFrame#Toast {{ background: {p['raised']}; border: 1px solid {p['sel_border']}; border-radius: 12px; }}
-QFrame#StepCard {{ background: {p['panel']}; border: 1px solid {p['border']}; border-radius: 14px; }}
+QFrame#StepCard {{ background: {rgba(p['panel'], 0.82)}; border: 1px solid {p['border']};
+  border-radius: 16px; }}
+QFrame#StepCard:hover {{ background: {p['raised']}; border: 1px solid {p['sel_border']}; }}
+QLabel#IconTile {{ background: {rgba(p['accent'], 0.16)}; border-radius: 11px; }}
+QLabel[role="stepnum"] {{ font-size: 12px; font-weight: 600; color: {p['muted']}; }}
+QLabel[role="cardtitle"] {{ font-size: 15px; font-weight: 600; }}
+QLabel[role="pill"] {{ background: {rgba(p['accent'], 0.13)}; color: {p['chip']};
+  border: 1px solid {rgba(p['accent'], 0.30)}; border-radius: 12px; padding: 3px 12px; font-size: 12px; font-weight: 500; }}
 QLabel {{ color: {p['text']}; background: transparent; }}
 QLabel[muted="true"] {{ color: {p['muted']}; }}
 QLabel[role="title"] {{ font-size: 24px; font-weight: 600; }}
@@ -86,9 +92,11 @@ QPushButton:pressed {{ background: {p['border']}; }}
 QPushButton:focus {{ border: 1px solid {p['accent']}; }}
 QPushButton:disabled {{ color: {p['muted']}; background: {p['raised']}; border: 1px solid {p['border']}; }}
 QPushButton[iconOnly="true"] {{ padding: 0; }}
-QPushButton[kind="primary"] {{ background: {p['accent']}; border: 1px solid {p['accent']}; color: {p['on_accent']};
+QPushButton[kind="primary"] {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {p['accent']},
+  stop:1 {mix(p['accent'], '#9B6BFF', 0.5)}); border: 1px solid {p['accent']}; color: {p['on_accent']};
   font-weight: 600; }}
-QPushButton[kind="primary"]:hover {{ background: {p['accent_hover']}; border-color: {p['accent_hover']}; }}
+QPushButton[kind="primary"]:hover {{ background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 {p['accent_hover']},
+  stop:1 {mix(p['accent_hover'], '#9B6BFF', 0.5)}); border-color: {p['accent_hover']}; }}
 QPushButton[kind="primary"]:pressed {{ background: {p['accent_press']}; border-color: {p['accent_press']}; }}
 QPushButton[kind="primary"]:disabled {{ background: {p['track']}; border-color: {p['track']}; color: {p['muted']}; }}
 QPushButton[kind="ghost"] {{ background: transparent; border: 1px solid transparent; }}
