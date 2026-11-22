@@ -80,7 +80,7 @@ def run_selftest(report_path=None, real=False, screenshots=None) -> int:
                 service.save_translation(seg.id, "")
             elif k % 5 == 0:
                 service.save_translation(seg.id, "Texto revisado a mano")
-        service.import_file(source, "Tienda de Mei", "es", "en")   # segundo proyecto, sin traducir, para la barra lateral
+        service.import_file(source, "Tienda de Mei", "es", "en")   # segundo proyecto, sin traducir
         app = QApplication.instance() or QApplication([])
         _load_fonts(app)   # sin esto, la plataforma «offscreen» dibuja cuadros en lugar de texto
         settings = QSettings(os.path.join(folder, "shots.ini"), QSettings.IniFormat)

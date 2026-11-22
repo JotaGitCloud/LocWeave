@@ -510,7 +510,7 @@ class LoomBackground(AuroraBackground):
         painter.setRenderHint(QPainter.Antialiasing)
         fade = QLinearGradient(0, 0, w, 0)
         for k in range(self.THREADS):
-            alpha = (0.20 if dark else 0.26) * (0.45 + 0.55 * ((k * 5) % 7) / 6)
+            alpha = (0.42 if dark else 0.40) * (0.45 + 0.55 * ((k * 5) % 7) / 6)
             fade.setColorAt(0.0, qcolor(p["accent"], 0))
             fade.setColorAt(0.25, qcolor(p["accent"], alpha))
             fade.setColorAt(0.75, qcolor(VIOLET, alpha))
@@ -521,7 +521,7 @@ class LoomBackground(AuroraBackground):
             while x < w + 10:
                 x += 10.0
                 path.lineTo(x, self._thread_y(k, x, h))
-            painter.setPen(QPen(QBrush(fade), 1.5 if k % 3 else 2.2))
+            painter.setPen(QPen(QBrush(fade), 1.6 if k % 3 else 2.4))
             painter.setBrush(Qt.NoBrush)
             painter.drawPath(path)
         # lanzadera: un punto de luz que recorre un hilo de lado a lado

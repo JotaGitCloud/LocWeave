@@ -253,7 +253,7 @@ class ProjectDelegate(QStyledItemDelegate):
         # mini tejido: dos filas de hilos con los colores de cada estado
         cells = self.mini_weave(info.get("counts", {}))
         colors = {key: p[col] for key, col in self.STATUS_KEYS}
-        area_top, area_h = inner.bottom() - 15, 15.0
+        area_top, area_h = inner.bottom() - 17, 17.0
         step = inner.width() / self.CELLS
         size = min(step, area_h / self.ROWS)
         painter.setPen(Qt.NoPen)
