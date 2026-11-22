@@ -50,7 +50,7 @@ def run_selftest(report_path=None, real=False, screenshots=None) -> int:
         from PySide6.QtWidgets import QApplication
 
         from app.database import Database
-        from app.gui.main_window import MainWindow
+        from app.gui.main_window import MainWindow, _load_fonts
         from app.gui.theme import theme
         from app.services.project_service import LocWeaveService
 
@@ -74,6 +74,7 @@ def run_selftest(report_path=None, real=False, screenshots=None) -> int:
         project = service.import_file(source, "Aldea de Hoshi", "es", "en")
         service.translate(project.id, "mock")
         app = QApplication.instance() or QApplication([])
+        _load_fonts(app)   # sin esto, la plataforma «offscreen» dibuja cuadros en lugar de texto
         settings = QSettings(os.path.join(folder, "shots.ini"), QSettings.IniFormat)
         window = MainWindow(service, settings)
         window.resize(1320, 820)

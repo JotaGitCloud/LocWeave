@@ -140,7 +140,7 @@ class FeatureCard(QFrame):
     def __init__(self, number: str, icon_name: str, title: str, text: str, parent=None):
         super().__init__(parent)
         self.setObjectName("StepCard")
-        self.setFixedSize(244, 148)
+        self.setFixedSize(248, 168)
         self.setCursor(Qt.ArrowCursor)
         self._icon_name = icon_name
         v = QVBoxLayout(self)
