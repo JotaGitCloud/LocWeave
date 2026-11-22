@@ -33,8 +33,6 @@ jobs:
   build:
     name: build (${{ matrix.variant }})
     needs: prep
-    env:
-      RELEASE_TAG: ${{ needs.prep.outputs.tag }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -46,6 +44,7 @@ jobs:
             slim: "1"
     env:
       LOCWEAVE_SLIM: ${{ matrix.slim }}
+      RELEASE_TAG: ${{ needs.prep.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
