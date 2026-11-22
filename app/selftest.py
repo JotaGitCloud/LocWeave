@@ -54,6 +54,10 @@ def run_selftest(report_path=None, real=False, screenshots=None) -> int:
         from app.gui.theme import theme
         from app.services.project_service import LocWeaveService
 
+        def save_png(win, path):
+            if not win.grab().save(path, "PNG"):
+                raise RuntimeError(f"No se pudo guardar {path}")
+
         os.makedirs(screenshots, exist_ok=True)
         folder = os.environ["LOCWEAVE_HOME"]
         source = os.path.join(folder, "shots.json")
@@ -78,17 +82,21 @@ def run_selftest(report_path=None, real=False, screenshots=None) -> int:
             theme.set(mode)
             window.stack.setCurrentIndex(0)
             app.processEvents()
-            window.grab().save(os.path.join(screenshots, f"{mode}-inicio.png"))
+            save_png(window, os.path.join(screenshots, f"{mode}-inicio.png"))
             window._open_project(project.id)
             for _ in range(5):
                 app.processEvents()
             window.table.selectRow(2)
             app.processEvents()
-            window.grab().save(os.path.join(screenshots, f"{mode}-proyecto.png"))
+            save_png(window, os.path.join(screenshots, f"{mode}-proyecto.png"))
             window.stack.setCurrentIndex(0)
         window.close()
         app.processEvents()
-        return f"capturas guardadas en {screenshots}"
+        names = sorted(os.listdir(screenshots))
+        sizes = ", ".join(f"{n} ({os.path.getsize(os.path.join(screenshots, n))} B)" for n in names)
+        if len(names) < 4:
+            raise RuntimeError(f"Faltan capturas: {sizes or 'ninguna'}")
+        return f"capturas guardadas en {screenshots}: {sizes}"
 
     def pipeline():
         from app.database import Database
