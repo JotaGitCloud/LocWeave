@@ -75,7 +75,8 @@ QLabel#IconTile {{ background: {rgba(p['accent'], 0.16)}; border-radius: 11px; }
 QLabel[role="stepnum"] {{ font-size: 12px; font-weight: 600; color: {p['muted']}; }}
 QLabel[role="cardtitle"] {{ font-size: 15px; font-weight: 600; }}
 QLabel[role="pill"] {{ background: {rgba(p['accent'], 0.13)}; color: {p['chip']};
-  border: 1px solid {rgba(p['accent'], 0.30)}; border-radius: 12px; padding: 3px 12px; font-size: 12px; font-weight: 500; }}
+  border: 1px solid {rgba(p['accent'], 0.30)}; border-radius: 12px; padding: 3px 12px;
+  font-size: 12px; font-weight: 500; }}
 QLabel {{ color: {p['text']}; background: transparent; }}
 QLabel[muted="true"] {{ color: {p['muted']}; }}
 QLabel[role="title"] {{ font-size: 24px; font-weight: 600; }}
