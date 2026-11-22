@@ -53,7 +53,8 @@ class PoTests(TempCase):
         src = self.write("a.po", self.PO)
         h = get_handler(src)
         entries = h.parse(src)
-        self.assertEqual([e.key for e in entries], ["Hello", "menu|Open", "Line1\nLine2"])
+        self.assertEqual([e.key for e in entries],
+                         ["Hello", "menu|Open", "Line1\nLine2", "One apple", "One apple [plural]"])
         self.assertEqual(entries[1].existing, "Abrir")
         out = self.dir / "out.po"
         h.export(src, out, {"Hello": "Hola", "Line1\nLine2": "Uno\nDos"}, "es")
@@ -61,12 +62,33 @@ class PoTests(TempCase):
         self.assertIn('msgstr "Hola"', text)
         self.assertIn('msgstr "Abrir"', text)
         self.assertIn('"Uno\\n"\n"Dos"', text)
+        self.assertIn('msgstr[0] ""', text)
         self.assertIn('msgstr[1] ""', text)
-        self.assertIn('"Language: en\\n"', text)
+        self.assertIn('"Language: es\\n"', text)
+        self.assertIn("Plural-Forms: nplurals=2; plural=n != 1;", text)
         # el archivo exportado se puede volver a leer
         again = h.parse(out)
         self.assertEqual(again[0].existing, "Hola")
         self.assertEqual(again[2].existing, "Uno\nDos")
+
+    def test_plurals_are_translated_and_follow_target_language(self):
+        src = self.write("p.po", self.PO)
+        h = get_handler(src)
+        tr = {"One apple": "Una manzana", "One apple [plural]": "%d manzanas"}
+        out = self.dir / "es.po"
+        h.export(src, out, tr, "es")
+        text = out.read_text(encoding="utf-8")
+        self.assertIn('msgstr[0] "Una manzana"', text)
+        self.assertIn('msgstr[1] "%d manzanas"', text)
+        out_ja = self.dir / "ja.po"
+        h.export(src, out_ja, {"One apple": "りんご", "One apple [plural]": "りんご"}, "ja")
+        text_ja = out_ja.read_text(encoding="utf-8")
+        self.assertIn('msgstr[0] "りんご"', text_ja)
+        self.assertNotIn("msgstr[1]", text_ja)
+        self.assertIn("nplurals=1; plural=0;", text_ja)
+        existing = {e.key: e.existing for e in h.parse(out)}
+        self.assertEqual(existing["One apple"], "Una manzana")
+        self.assertEqual(existing["One apple [plural]"], "%d manzanas")
 
 
 class PropertiesTests(TempCase):

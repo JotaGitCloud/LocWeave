@@ -93,6 +93,12 @@ tests/                  pruebas unitarias (unittest)
 
 La interfaz es una capa reemplazable que solo usa `LocWeaveService` (ver `docs/ADR-004-capa-de-presentacion-qt.md`).
 
+Decisiones de arquitectura (en `docs/`, junto al registro del equipo `Registro_ADR_LocWeave_FINAL.docx`):
+- [ADR 002 (adenda)](docs/ADR-002-addendum-estructura-actual.md): estructura actual del repositorio.
+- [ADR 004](docs/ADR-004-capa-de-presentacion-qt.md): interfaz con Qt (PySide6).
+- [ADR 005](docs/ADR-005-distribucion-ligera-y-motor-local.md): distribución ligera y motor local.
+- [ADR 006](docs/ADR-006-comunicacion-en-version-de-escritorio.md): comunicación en la versión de escritorio.
+
 Para agregar un formato: crea un `FormatHandler` en `app/parsers/` y regístralo en `__init__.py`.
 Para agregar un motor: implementa `TranslationProvider` en `app/providers/`.
 
@@ -125,7 +131,7 @@ internet. Para que la descarga sea lo más liviana posible:
 
 - La calidad depende de los modelos de Argos Translate; es una traducción asistida, revísala antes de publicar.
 - El soporte de Ren'Py es básico (diálogos, menús, `_()`, `text`/`textbutton`); no interpreta bloques `python`.
-- Los textos con plurales de `.po` se omiten por ahora.
+- En `.po`, los plurales se traducen como dos textos (singular y plural) y se escriben tantas formas como pida el idioma de destino.
 
 ---
 

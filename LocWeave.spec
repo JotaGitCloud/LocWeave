@@ -10,7 +10,7 @@ from PyInstaller.utils.hooks import collect_all, collect_dynamic_libs, collect_s
 
 SLIM = os.environ.get("LOCWEAVE_SLIM") == "1"   # variante liviana: sin PyTorch
 
-datas = [("app/gui/assets", "app/gui/assets")]
+datas = [("app/gui/assets", "app/gui/assets"), ("samples", "samples")]
 binaries, hiddenimports = [], []
 
 # Runtime de Visual C++: se incluye dentro de la app para que funcione aunque el equipo no lo tenga instalado.

@@ -21,10 +21,10 @@ from ..services.placeholders import extract_placeholders
 from ..services.project_service import LocWeaveService
 from ..services.validation import has_errors, validate
 from .delegates import PROJECT_ROLE, ProjectDelegate, SegmentDelegate, SegmentTableModel, rich_html
-from .decor import AuroraBackground, FeatureCard, GradientTitle, HeroLogo, Pill, SidebarFrame
+from .decor import AuroraBackground, FeatureCard, GradientTitle, HeroLogo, Pill, SidebarFrame, StatsLegend
 from .dialogs import GlossaryDialog, NewProjectDialog, fill_languages
 from .platform_utils import set_app_id, set_dark_titlebar
-from .resources import assets_dir
+from .resources import assets_dir, samples_dir
 from .theme import theme
 from .widgets import IconButton, LogoWidget, SegmentedBar, ThemeToggle, ThreadLine, Toast, fade_in, pulse
 from .workers import TaskWorker
@@ -170,7 +170,10 @@ class MainWindow(QMainWindow):
         start.clicked.connect(self._new_project)
         col.addSpacing(10)
         col.addWidget(start, 0, Qt.AlignHCenter)
-        col.addSpacing(20)
+        demo = IconButton("Probar con un ejemplo (japonés → español)", None, "ghost")
+        demo.clicked.connect(self._open_sample)
+        col.addWidget(demo, 0, Qt.AlignHCenter)
+        col.addSpacing(14)
 
         steps = QHBoxLayout()
         steps.setSpacing(16)
@@ -214,7 +217,7 @@ class MainWindow(QMainWindow):
         v.addLayout(top)
 
         self.bar = SegmentedBar()
-        self.stats_label = _label("", "small")
+        self.stats_label = StatsLegend()
         v.addWidget(self.bar)
         v.addWidget(self.stats_label)
 
@@ -485,6 +488,16 @@ class MainWindow(QMainWindow):
             self._run(lambda progress, cancel: self.service.import_file(file, name, src, tgt, progress),
                       lambda project: self._open_project(project.id), "Importando archivo…")
 
+    def _open_sample(self) -> None:
+        """Crea un proyecto de ejemplo con el archivo incluido en la aplicación, para probarla en un clic."""
+        sample = samples_dir() / "dialogos_ja.json"
+        if self.worker is not None or not sample.exists():
+            self.toast.show_message("No se encontró el archivo de ejemplo.", "error")
+            return
+        self._run(lambda progress, cancel: self.service.import_file(
+            str(sample), "Ejemplo · diálogos (JP → ES)", "ja", "es", progress),
+            lambda project: self._open_project(project.id), "Creando proyecto de ejemplo…")
+
     def _open_project(self, project_id: int) -> None:
         if self.worker is not None:
             return
@@ -553,8 +566,8 @@ class MainWindow(QMainWindow):
         reviewed, translated = s.get("reviewed", 0), s.get("translated", 0)
         review, pending = s.get("needs_review", 0), s.get("pending", 0)
         self.bar.set_counts(reviewed, translated, review, pending)
-        self.stats_label.setText(f"{s['total']} textos · {reviewed} revisados · {translated} traducidos · "
-                                 f"{review} por revisar · {pending} pendientes")
+        self.stats_label.set_counts(s["total"], {"reviewed": reviewed, "translated": translated,
+                                                 "needs_review": review, "pending": pending})
 
     def _set_editor_enabled(self, enabled: bool) -> None:
         for w in (self.source_box, self.target_box, self.save_btn):

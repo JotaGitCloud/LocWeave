@@ -188,3 +188,46 @@ class FeatureCard(QFrame):
 
     def _refresh(self) -> None:
         self._tile.setPixmap(icon(self._icon_name, theme.p["accent_hover"], 20).pixmap(20, 20))
+
+
+class StatsLegend(QWidget):
+    """Leyenda de estados con punto de color: «● 4 revisados  ● 10 traducidos …» (colores iguales a la barra)."""
+
+    ITEMS = (("reviewed", "ok_base", "revisados"), ("translated", "tr_base", "traducidos"),
+             ("needs_review", "rv_base", "por revisar"), ("pending", "pe_base", "pendientes"))
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._total = 0
+        self._counts = {}
+        self.setFixedHeight(22)
+        theme.changed.connect(self.update)
+
+    def set_counts(self, total: int, counts: dict) -> None:
+        self._total, self._counts = total, counts
+        self.update()
+
+    def paintEvent(self, _event):
+        p = theme.p
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        font = QFont(self.font())
+        font.setPointSizeF(9.5)
+        painter.setFont(font)
+        metrics = QFontMetrics(font)
+        x, mid = 0.0, self.height() / 2
+        head = f"{self._total} textos"
+        painter.setPen(QColor(p["text"]))
+        painter.drawText(QRectF(x, 0, metrics.horizontalAdvance(head) + 4, self.height()),
+                         Qt.AlignVCenter | Qt.AlignLeft, head)
+        x += metrics.horizontalAdvance(head) + 22
+        for key, color, label in self.ITEMS:
+            count = self._counts.get(key, 0)
+            text = f"{count} {label}"
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(p[color]) if count else qcolor(p[color], 0.35))
+            painter.drawEllipse(QPointF(x + 4, mid), 4, 4)
+            painter.setPen(QColor(p["muted"]) if count else qcolor(p["muted"], 0.6))
+            painter.drawText(QRectF(x + 14, 0, metrics.horizontalAdvance(text) + 4, self.height()),
+                             Qt.AlignVCenter | Qt.AlignLeft, text)
+            x += 14 + metrics.horizontalAdvance(text) + 20

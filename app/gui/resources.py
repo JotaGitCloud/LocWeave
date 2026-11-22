@@ -8,3 +8,10 @@ def assets_dir() -> Path:
     if frozen:
         return Path(frozen) / "app" / "gui" / "assets"
     return Path(__file__).resolve().parent / "assets"
+
+
+def samples_dir() -> Path:
+    frozen = getattr(sys, "_MEIPASS", None)
+    if frozen:
+        return Path(frozen) / "samples"
+    return Path(__file__).resolve().parents[2] / "samples"
