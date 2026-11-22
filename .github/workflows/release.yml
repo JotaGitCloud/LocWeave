@@ -4,14 +4,37 @@ on:
   push:
     branches: ["qt-migration"]   # compila en cada subida a esta rama (solo genera archivos descargables)
     tags: ["v*"]                 # una etiqueta v* además publica el Release
-  workflow_dispatch:
+  workflow_dispatch:             # botón «Run workflow»: publica un Release con versión automática
 
 permissions:
   contents: write
 
 jobs:
+  prep:
+    name: versión
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      # Se publica un Release solo si: (a) se sube una etiqueta v*, (b) el mensaje del commit contiene [release],
+      # o (c) se pulsa «Run workflow». La versión de (b) y (c) sube sola: 0.1.0-beta.<número de ejecución>.
+      - id: v
+        env:
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          tag=""
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then tag="$GITHUB_REF_NAME"
+          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [[ "$MSG" == *"[release]"* ]]; then
+            tag="v0.1.0-beta.${{ github.run_number }}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Etiqueta de publicación: '${tag:-(ninguna)}'"
+
   build:
     name: build (${{ matrix.variant }})
+    needs: prep
+    env:
+      RELEASE_TAG: ${{ needs.prep.outputs.tag }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -63,10 +86,10 @@ jobs:
         run: python -m unittest discover -s tests -v
 
       - name: Fijar versión de la aplicación
-        if: github.ref_type == 'tag'
+        if: env.RELEASE_TAG != ''
         shell: pwsh
         run: |
-          $v = $env:GITHUB_REF_NAME.TrimStart("v")
+          $v = $env:RELEASE_TAG.TrimStart("v")
           (Get-Content app/config.py) -replace 'APP_VERSION = ".*?"', "APP_VERSION = `"$v`"" | Set-Content app/config.py
           Select-String -Path app/config.py -Pattern APP_VERSION
 
@@ -120,7 +143,7 @@ jobs:
         shell: pwsh
         run: |
           choco install innosetup -y --no-progress
-          $version = if ($env:GITHUB_REF_TYPE -eq "tag") { $env:GITHUB_REF_NAME.TrimStart("v") } else { "0.1.0" }
+          $version = if ($env:RELEASE_TAG) { $env:RELEASE_TAG.TrimStart("v") } else { "0.1.0" }
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" installer\LocWeave.iss
           if (Test-Path installer_out\LocWeave-Setup.exe) { Move-Item installer_out\LocWeave-Setup.exe "LocWeave-Setup-${{ matrix.variant }}.exe" }
 
@@ -169,11 +192,24 @@ jobs:
         shell: pwsh
         run: throw "La autoprueba del ejecutable (${{ matrix.variant }}) falló, revisa el Summary."
 
+  publish:
+    name: publicar release
+    needs: [prep, build]
+    if: needs.prep.outputs.tag != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-files
+          merge-multiple: true
       - name: Publicar release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          tag_name: ${{ needs.prep.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ contains(needs.prep.outputs.tag, '-') }}
+          generate_release_notes: true
+          body: ${{ github.event.head_commit.message }}
           files: |
-            LocWeave-windows-${{ matrix.variant }}.zip
-            LocWeave-Setup-${{ matrix.variant }}.exe
+            dist-files/LocWeave-windows-*.zip
+            dist-files/LocWeave-Setup-*.exe
