@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 APP_NAME = "LocWeave"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.1.0-dev"  # CI lo reemplaza por la versión de la etiqueta al publicar
 
 
 def data_dir() -> Path:

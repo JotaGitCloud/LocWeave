@@ -26,6 +26,7 @@ from .dialogs import GlossaryDialog, NewProjectDialog, fill_languages
 from .platform_utils import set_app_id, set_dark_titlebar
 from .resources import assets_dir, samples_dir
 from .theme import theme
+from .update_flow import UpdateController
 from .widgets import IconButton, LogoWidget, SegmentedBar, ThemeToggle, ThreadLine, Toast, fade_in, pulse
 from .workers import TaskWorker
 
@@ -100,6 +101,8 @@ class MainWindow(QMainWindow):
         self._refresh_projects()
         self._set_project_actions(False)
         self.stack.setCurrentIndex(0)
+        self.updates = UpdateController(self)
+        self.updates.start_silent_check()
 
     # ================================================================ construcción
     def _build_sidebar(self) -> QFrame:
@@ -142,6 +145,10 @@ class MainWindow(QMainWindow):
         self.new_btn.clicked.connect(self._new_project)
         v.addSpacing(12)
         v.addWidget(self.new_btn)
+        self.update_btn = IconButton("Buscar actualizaciones", "refresh", "ghost")
+        self.update_btn.clicked.connect(lambda: self.updates.check(silent=False))
+        v.addSpacing(6)
+        v.addWidget(self.update_btn)
         return side
 
     def _build_empty_page(self) -> QWidget:
@@ -418,6 +425,7 @@ class MainWindow(QMainWindow):
         self.progress.setRange(0, 0)
         self.footer.show()
         self.new_btn.setEnabled(False)
+        self.update_btn.setEnabled(False)
         self._set_project_actions(False)
         self.worker.start()
 
@@ -436,6 +444,7 @@ class MainWindow(QMainWindow):
             worker.deleteLater()
         self.footer.hide()
         self.new_btn.setEnabled(True)
+        self.update_btn.setEnabled(True)
         self._set_project_actions(self.project is not None)
         if toast:
             self.toast.show_message(toast, kind)

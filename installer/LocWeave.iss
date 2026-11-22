@@ -21,6 +21,9 @@ SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
+AppId={{7C1E2B54-3A0D-4D8E-9B53-4C0C5E7A1F21}
+CloseApplications=yes
+RestartApplications=no
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
@@ -36,4 +39,4 @@ Name: "{autoprograms}\LocWeave"; Filename: "{app}\LocWeave.exe"
 Name: "{autodesktop}\LocWeave"; Filename: "{app}\LocWeave.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\LocWeave.exe"; Description: "Abrir LocWeave"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\LocWeave.exe"; Description: "Abrir LocWeave"; Flags: nowait postinstall

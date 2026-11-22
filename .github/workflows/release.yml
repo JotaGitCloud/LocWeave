@@ -62,6 +62,14 @@ jobs:
       - name: Pruebas
         run: python -m unittest discover -s tests -v
 
+      - name: Fijar versión de la aplicación
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          $v = $env:GITHUB_REF_NAME.TrimStart("v")
+          (Get-Content app/config.py) -replace 'APP_VERSION = ".*?"', "APP_VERSION = `"$v`"" | Set-Content app/config.py
+          Select-String -Path app/config.py -Pattern APP_VERSION
+
       - name: Crear ejecutable
         run: pyinstaller LocWeave.spec --noconfirm --clean
 
