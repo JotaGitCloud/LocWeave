@@ -103,11 +103,28 @@ def run_selftest(report_path=None, real=False, screenshots=None) -> int:
             app.processEvents()
             save_png(window, os.path.join(screenshots, f"{mode}-proyecto.png"))
             window.stack.setCurrentIndex(0)
+        from app.gui.dialogs import GlossaryDialog, NewProjectDialog
+        for mode in ("dark", "light"):
+            theme.set(mode)
+            dlg = NewProjectDialog(window, source)
+            dlg.resize(660, 640)
+            dlg.show()
+            app.processEvents()
+            save_png(dlg, os.path.join(screenshots, f"{mode}-dialogo-nuevo.png"))
+            dlg.close()
+            service.add_term(project.id, "Hoshi", "Hoshi")
+            service.add_term(project.id, "herrero", "blacksmith")
+            gl = GlossaryDialog(service, project.id, window)
+            gl.resize(660, 580)
+            gl.show()
+            app.processEvents()
+            save_png(gl, os.path.join(screenshots, f"{mode}-dialogo-glosario.png"))
+            gl.close()
         window.close()
         app.processEvents()
         names = sorted(os.listdir(screenshots))
         sizes = ", ".join(f"{n} ({os.path.getsize(os.path.join(screenshots, n))} B)" for n in names)
-        if len(names) < 4:
+        if len(names) < 8:
             raise RuntimeError(f"Faltan capturas: {sizes or 'ninguna'}")
         return f"capturas guardadas en {screenshots}: {sizes}"
 

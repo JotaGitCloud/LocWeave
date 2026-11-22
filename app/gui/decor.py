@@ -6,7 +6,7 @@ from PySide6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QTimer, QVariantAn
 from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QLinearGradient, QPainter, QPainterPath, QPen,
                            QRadialGradient)
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QDialog, QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from .icons import icon, logo_svg
 from .theme import mix, qcolor, theme
@@ -533,3 +533,203 @@ class LoomBackground(AuroraBackground):
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor("#FFFFFF") if dark else QColor(p["accent"]))
         painter.drawEllipse(center, 2.6, 2.6)
+
+
+class StyledDialog(QDialog):
+    """Diálogo con el mismo fondo de brillos que la aplicación."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        theme.changed.connect(self.update)
+
+    def paintEvent(self, _event):
+        p = theme.p
+        dark = p["name"] == "dark"
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.fillRect(self.rect(), QColor(p["bg"]))
+        w, h = self.width(), self.height()
+        _glow(painter, QPointF(w * 0.12, 0), max(w, h) * 0.75, p["accent"], 0.22 if dark else 0.14)
+        _glow(painter, QPointF(w, h), max(w, h) * 0.6, VIOLET, 0.14 if dark else 0.09)
+
+
+class DialogHeader(QWidget):
+    """Cabecera de diálogo: icono en mosaico, título y subtítulo."""
+
+    def __init__(self, icon_name: str, title: str, subtitle: str, parent=None):
+        super().__init__(parent)
+        self._icon_name = icon_name
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(16)
+        self._tile = QLabel()
+        self._tile.setObjectName("IconTile")
+        self._tile.setFixedSize(52, 52)
+        self._tile.setAlignment(Qt.AlignCenter)
+        row.addWidget(self._tile, 0, Qt.AlignTop)
+        col = QVBoxLayout()
+        col.setSpacing(3)
+        self.title = QLabel(title)
+        self.title.setProperty("role", "title")
+        self.subtitle = QLabel(subtitle)
+        self.subtitle.setProperty("muted", True)
+        self.subtitle.setWordWrap(True)
+        col.addWidget(self.title)
+        col.addWidget(self.subtitle)
+        row.addLayout(col, 1)
+        theme.changed.connect(self._restyle)
+        self._restyle()
+
+    def _restyle(self) -> None:
+        self._tile.setPixmap(icon(self._icon_name, theme.p["accent"], 26).pixmap(26, 26))
+
+
+class FormatChip(QWidget):
+    """Etiqueta de formato; la activa se rellena con el color de marca."""
+
+    def __init__(self, text: str, parent=None):
+        super().__init__(parent)
+        self._text, self._active = text, False
+        font = QFont(self.font())
+        font.setPointSizeF(9)
+        font.setWeight(QFont.Medium)
+        self._font = font
+        self.setFixedSize(QFontMetrics(font).horizontalAdvance(text) + 24, 24)
+        theme.changed.connect(self.update)
+
+    def set_active(self, active: bool) -> None:
+        self._active = active
+        self.update()
+
+    def paintEvent(self, _event):
+        p = theme.p
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        if self._active:
+            painter.setBrush(brand_gradient(0, 0, rect.width(), 0))
+            painter.setPen(Qt.NoPen)
+            text_color = QColor(p["on_accent"])
+        else:
+            painter.setBrush(Qt.NoBrush)
+            painter.setPen(QPen(QColor(p["border"]), 1))
+            text_color = QColor(p["muted"])
+        painter.drawRoundedRect(rect, rect.height() / 2, rect.height() / 2)
+        painter.setFont(self._font)
+        painter.setPen(text_color)
+        painter.drawText(rect, Qt.AlignCenter, self._text)
+
+
+class DropZone(QFrame):
+    """Zona para soltar un archivo (o hacer clic para examinar), con borde punteado que se ilumina."""
+
+    fileDropped = Signal(str)
+    browseRequested = Signal()
+
+    def __init__(self, supported: tuple, parent=None):
+        super().__init__(parent)
+        self.setObjectName("DropZone")
+        self.setAcceptDrops(True)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setMinimumHeight(152)
+        self._supported = tuple(supported)
+        self._file = ""
+        self._hot = 0.0
+        self._anim = QVariantAnimation(self)
+        self._anim.setDuration(180)
+        self._anim.setEasingCurve(QEasingCurve.OutCubic)
+        self._anim.valueChanged.connect(self._tick)
+        v = QVBoxLayout(self)
+        v.setContentsMargins(20, 16, 20, 16)
+        v.setSpacing(4)
+        v.setAlignment(Qt.AlignCenter)
+        self._tile = QLabel()
+        self._tile.setObjectName("IconTile")
+        self._tile.setFixedSize(48, 48)
+        self._tile.setAlignment(Qt.AlignCenter)
+        self.title = QLabel("Suelta aquí el archivo de tu juego")
+        self.title.setProperty("role", "cardtitle")
+        self.sub = QLabel("o haz clic para examinar")
+        self.sub.setProperty("role", "small")
+        for w in (self._tile, self.title, self.sub):
+            w.setAttribute(Qt.WA_TransparentForMouseEvents)
+            v.addWidget(w, 0, Qt.AlignHCenter)
+        theme.changed.connect(self._restyle)
+        self._restyle()
+
+    @property
+    def has_file(self) -> bool:
+        return bool(self._file)
+
+    def _restyle(self) -> None:
+        name = "file" if self._file else "upload"
+        self._tile.setPixmap(icon(name, theme.p["accent"], 24).pixmap(24, 24))
+        self.update()
+
+    def set_file(self, path: str, note: str = "") -> None:
+        import os
+        self._file = path
+        if path:
+            self.title.setText(os.path.basename(path))
+            self.sub.setText(note or "Haz clic para elegir otro archivo")
+        else:
+            self.title.setText("Suelta aquí el archivo de tu juego")
+            self.sub.setText(note or "o haz clic para examinar")
+        self._restyle()
+
+    def set_error(self, text: str) -> None:
+        self.sub.setText(text)
+
+    def _goto(self, target: float) -> None:
+        self._anim.stop()
+        self._anim.setStartValue(self._hot)
+        self._anim.setEndValue(target)
+        self._anim.start()
+
+    def _tick(self, value) -> None:
+        self._hot = float(value)
+        self.update()
+
+    def enterEvent(self, event):
+        self._goto(0.55)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self._goto(0.0)
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.browseRequested.emit()
+        super().mousePressEvent(event)
+
+    def dragEnterEvent(self, event):
+        urls = event.mimeData().urls()
+        if urls and urls[0].isLocalFile():
+            event.acceptProposedAction()
+            self._goto(1.0)
+
+    def dragLeaveEvent(self, event):
+        self._goto(0.0)
+        super().dragLeaveEvent(event)
+
+    def dropEvent(self, event):
+        urls = event.mimeData().urls()
+        self._goto(0.0)
+        if urls and urls[0].isLocalFile():
+            event.acceptProposedAction()
+            self.fileDropped.emit(urls[0].toLocalFile())
+
+    def paintEvent(self, _event):
+        p = theme.p
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = QRectF(self.rect()).adjusted(1.5, 1.5, -1.5, -1.5)
+        painter.setBrush(qcolor(p["accent"], 0.045 + 0.13 * self._hot + (0.06 if self._file else 0)))
+        if self._file:
+            painter.setPen(QPen(qcolor(p["accent"], 0.65), 1.4))
+        else:
+            pen = QPen(qcolor(p["accent"], 0.35 + 0.5 * self._hot), 1.6)
+            pen.setDashPattern([5, 4])
+            painter.setPen(pen)
+        painter.drawRoundedRect(rect, 16, 16)
