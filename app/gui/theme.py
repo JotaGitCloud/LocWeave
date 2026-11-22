@@ -81,7 +81,8 @@ QLabel[role="hero"] {{ font-size: 28px; font-weight: 600; }}
 QLabel[role="small"] {{ font-size: 12px; color: {p['muted']}; }}
 QLabel[role="step"] {{ font-size: 13px; font-weight: 600; color: {p['accent']}; }}
 QLabel[role="section"] {{ font-size: 12px; font-weight: 500; color: {p['muted']}; }}
-QToolTip {{ background: {p['raised']}; color: {p['text']}; border: 1px solid {p['border']}; padding: 6px 8px; }}
+QToolTip {{ background: {p['raised']}; color: {p['text']}; border: 1px solid {p['sel_border']}; padding: 7px 11px;
+    font-size: 12px; }}
 
 QPushButton {{ min-height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid {p['border']};
   background: {p['raised']}; color: {p['text']}; font-weight: 500; }}

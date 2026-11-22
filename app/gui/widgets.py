@@ -5,7 +5,8 @@ from PySide6.QtCore import (QEasingCurve, QEvent, QPoint, QPointF, QPropertyAnim
                             QVariantAnimation, Signal)
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import (QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QPushButton, QWidget)
+from PySide6.QtWidgets import (QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QPushButton, QStackedWidget,
+                               QWidget)
 
 from .icons import icon, logo_svg
 from .theme import theme
@@ -37,6 +38,27 @@ def pulse(widget: QWidget, duration: int = 180, start: float = 0.5) -> None:
     anim.setEasingCurve(QEasingCurve.OutCubic)
     anim.start()
     widget._pulse_anim = anim
+
+
+class FadeStack(QStackedWidget):
+    """Pila de páginas que entra con un desvanecimiento suave (y un leve deslizamiento) al cambiar de pantalla."""
+
+    def setCurrentIndex(self, index: int) -> None:
+        changed = index != self.currentIndex()
+        super().setCurrentIndex(index)
+        page = self.currentWidget()
+        if not changed or page is None or not self.isVisible():
+            return
+        effect = QGraphicsOpacityEffect(page)
+        page.setGraphicsEffect(effect)
+        anim = QPropertyAnimation(effect, b"opacity", page)
+        anim.setDuration(260)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.OutCubic)
+        anim.finished.connect(lambda: page.setGraphicsEffect(None))   # el efecto no debe quedarse puesto
+        anim.start()
+        self._anim = anim
 
 
 class LogoWidget(QWidget):

@@ -7,7 +7,7 @@ from PySide6.QtCore import QModelIndex, QSettings, Qt, QTimer
 from PySide6.QtGui import QFont, QFontDatabase, QIcon, QKeySequence, QShortcut, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QFileDialog, QFrame, QGridLayout,
                                QHBoxLayout, QHeaderView, QLabel, QListView, QMainWindow, QMessageBox,
-                               QProgressBar, QSplitter, QStackedWidget, QTableView, QTextEdit, QVBoxLayout,
+                               QProgressBar, QSplitter, QTableView, QTextEdit, QVBoxLayout,
                                QWidget)
 
 from ..config import APP_NAME, APP_VERSION, db_path
@@ -28,7 +28,7 @@ from .platform_utils import set_app_id, set_dark_titlebar
 from .resources import assets_dir, samples_dir
 from .theme import theme
 from .update_flow import UpdateController
-from .widgets import IconButton, LogoWidget, SegmentedBar, ThemeToggle, ThreadLine, Toast, fade_in, pulse
+from .widgets import FadeStack, IconButton, LogoWidget, SegmentedBar, ThemeToggle, ThreadLine, Toast, fade_in, pulse
 from .workers import TaskWorker
 
 EXPECTED_ERRORS = (PipelineError, ProviderError, FormatError)
@@ -87,7 +87,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self._build_sidebar())
-        self.stack = QStackedWidget()
+        self.stack = FadeStack()
         self.stack.addWidget(self._build_empty_page())
         self.stack.addWidget(self._build_project_page())
         layout.addWidget(self.stack, 1)
@@ -756,6 +756,8 @@ def launch() -> None:
     if icon_file.exists():
         app.setWindowIcon(QIcon(str(icon_file)))
     _load_fonts(app)
+    app.setEffectEnabled(Qt.UI_FadeTooltip, True)
+    app.setEffectEnabled(Qt.UI_AnimateTooltip, True)
     settings = QSettings()
     theme.set(str(settings.value("theme", "dark")))
     window = MainWindow(LocWeaveService(Database(db_path())), settings)
