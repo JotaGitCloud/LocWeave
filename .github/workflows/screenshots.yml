@@ -24,6 +24,7 @@ jobs:
           $dir = Join-Path $env:RUNNER_TEMP "shots"
           python main.py --selftest (Join-Path $env:RUNNER_TEMP "st.txt") --screenshots $dir
           Get-Content (Join-Path $env:RUNNER_TEMP "st.txt") | Select-Object -First 12
+          exit 0   # el motor Argos no se instala aquí; solo interesan las capturas
       - name: Capturas
         shell: pwsh
         run: |
