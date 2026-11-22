@@ -68,11 +68,18 @@ def run_selftest(report_path=None, real=False, screenshots=None) -> int:
             "shop.buy": "Comprar por %d monedas", "shop.sold": "¡Vendido! Gracias por tu compra.",
             "quest.title": "La espada perdida", "ui.save": "Guardar", "ui.back": "Volver",
         }
+        for n in range(1, 241):   # más textos para que el «tejido» se vea como en un juego real
+            demo[f"npc.{n:03d}"] = f"Línea de diálogo número {n}, dicha por un aldeano."
         with open(source, "w", encoding="utf-8") as fh:
             json.dump(demo, fh, ensure_ascii=False)
         service = LocWeaveService(Database(os.path.join(folder, "shots.db")))
         project = service.import_file(source, "Aldea de Hoshi", "es", "en")
         service.translate(project.id, "mock")
+        for k, seg in enumerate(service.segments(project.id)):   # variedad de estados para la captura
+            if k % 7 == 3:
+                service.save_translation(seg.id, "")
+            elif k % 5 == 0:
+                service.save_translation(seg.id, "Texto revisado a mano")
         app = QApplication.instance() or QApplication([])
         _load_fonts(app)   # sin esto, la plataforma «offscreen» dibuja cuadros en lugar de texto
         settings = QSettings(os.path.join(folder, "shots.ini"), QSettings.IniFormat)
@@ -88,6 +95,9 @@ def run_selftest(report_path=None, real=False, screenshots=None) -> int:
             for _ in range(5):
                 app.processEvents()
             window.table.selectRow(2)
+            window.weave._anim.stop()   # sin esperar la animación de entrada
+            window.weave._t = 1.0
+            app.processEvents()
             app.processEvents()
             save_png(window, os.path.join(screenshots, f"{mode}-proyecto.png"))
             window.stack.setCurrentIndex(0)

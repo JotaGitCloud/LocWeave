@@ -1,5 +1,7 @@
 """Elementos decorativos: fondos con brillo, logo con halo, título con degradado, tarjetas y etiquetas."""
-from PySide6.QtCore import QPointF, QRectF, Qt
+from typing import List
+
+from PySide6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QVariantAnimation, Signal
 from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QLinearGradient, QPainter, QPainterPath, QPen,
                            QRadialGradient)
 from PySide6.QtSvg import QSvgRenderer
@@ -231,3 +233,141 @@ class StatsLegend(QWidget):
             painter.drawText(QRectF(x + 14, 0, metrics.horizontalAdvance(text) + 4, self.height()),
                              Qt.AlignVCenter | Qt.AlignLeft, text)
             x += 14 + metrics.horizontalAdvance(text) + 20
+
+
+class WeaveMap(QWidget):
+    """«Tejido» del proyecto: cada texto es un hilo de color según su estado. Clic para saltar a ese texto."""
+
+    rowClicked = Signal(int)
+    STATUS_COLOR = {"reviewed": "bar_ok", "translated": "accent", "needs_review": "bar_rv", "pending": "track"}
+    STATUS_LABEL = {"reviewed": "Revisado", "translated": "Traducido", "needs_review": "Por revisar",
+                    "pending": "Pendiente"}
+    MAX_H = 60
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._status: List[str] = []
+        self._tips: List[str] = []
+        self._current = -1
+        self._hover = -1
+        self._t = 1.0
+        self._geom = (8.0, 1, 1)   # tamaño de celda, columnas, filas
+        self.setMouseTracking(True)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setMinimumHeight(18)
+        self._anim = QVariantAnimation(self)
+        self._anim.setStartValue(0.0)
+        self._anim.setEndValue(1.0)
+        self._anim.setDuration(900)
+        self._anim.setEasingCurve(QEasingCurve.OutCubic)
+        self._anim.valueChanged.connect(self._tick)
+        theme.changed.connect(self.update)
+
+    def set_segments(self, statuses: List[str], tips: List[str], animate: bool = True) -> None:
+        self._status, self._tips = list(statuses), list(tips)
+        self._relayout()
+        if animate and statuses:
+            self._anim.stop()
+            self._anim.start()
+        else:
+            self._t = 1.0
+        self.update()
+
+    def set_status(self, row: int, status: str, tip: str) -> None:
+        if 0 <= row < len(self._status):
+            self._status[row], self._tips[row] = status, tip
+            self.update()
+
+    def set_current(self, row: int) -> None:
+        self._current = row
+        self.update()
+
+    def _tick(self, value) -> None:
+        self._t = float(value)
+        self.update()
+
+    def _relayout(self) -> None:
+        n, width = max(len(self._status), 1), max(self.width(), 1)
+        size = 14.0
+        while size > 4.0:
+            cols = max(int(width // size), 1)
+            rows = -(-n // cols)
+            if rows * size <= self.MAX_H:
+                break
+            size -= 1.0
+        cols = max(int(width // size), 1)
+        rows = -(-n // cols)
+        self._geom = (size, cols, rows)
+        self.setFixedHeight(int(max(rows * size, 12)) + 2)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        old = self._geom
+        self._relayout()
+        if old != self._geom:
+            self.update()
+
+    def _cell_rect(self, i: int) -> QRectF:
+        size, cols, _ = self._geom
+        return QRectF((i % cols) * size, (i // cols) * size + 1, size, size)
+
+    def _index_at(self, pos) -> int:
+        size, cols, rows = self._geom
+        col, row = int(pos.x() // size), int((pos.y() - 1) // size)
+        i = row * cols + col
+        return i if 0 <= col < cols and 0 <= row < rows and 0 <= i < len(self._status) else -1
+
+    def mouseMoveEvent(self, event):
+        i = self._index_at(event.position())
+        if i != self._hover:
+            self._hover = i
+            self.update()
+        if i >= 0:
+            self.setToolTip(f"#{i + 1} · {self.STATUS_LABEL.get(self._status[i], '')}\n{self._tips[i]}")
+        else:
+            self.setToolTip("")
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        self._hover = -1
+        self.update()
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event):
+        i = self._index_at(event.position())
+        if i >= 0 and event.button() == Qt.LeftButton:
+            self.rowClicked.emit(i)
+        super().mousePressEvent(event)
+
+    def paintEvent(self, _event):
+        p = theme.p
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        n = len(self._status)
+        size, cols, _ = self._geom
+        gap = 1.0 if size < 8 else 1.6
+        radius = max(size * 0.28, 1.2)
+        painter.setPen(Qt.NoPen)
+        if n == 0:
+            painter.setBrush(QColor(p["track"]))
+            painter.drawRoundedRect(QRectF(0, 1, self.width(), 10), 5, 5)
+            return
+        for i, status in enumerate(self._status):
+            # barrido de aparición de izquierda a derecha, como un telar
+            reveal = min(max(self._t * 1.6 - (i / n) * 0.6, 0.0), 1.0)
+            if reveal <= 0:
+                continue
+            color = QColor(p[self.STATUS_COLOR.get(status, "track")])
+            if status == "pending":
+                color.setAlphaF(0.55)
+            color.setAlphaF(color.alphaF() * reveal)
+            rect = self._cell_rect(i).adjusted(gap / 2, gap / 2, -gap / 2, -gap / 2)
+            painter.setBrush(color)
+            painter.drawRoundedRect(rect, radius, radius)
+        for i, width in ((self._hover, 1.2), (self._current, 2.0)):
+            if 0 <= i < n:
+                rect = self._cell_rect(i).adjusted(-1, -1, 1, 1)
+                painter.setBrush(Qt.NoBrush)
+                painter.setPen(QPen(QColor(p["text"]), width))
+                painter.drawRoundedRect(rect, radius + 1, radius + 1)
+                painter.setPen(Qt.NoPen)

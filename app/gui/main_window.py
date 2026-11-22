@@ -21,7 +21,7 @@ from ..services.placeholders import extract_placeholders
 from ..services.project_service import LocWeaveService
 from ..services.validation import has_errors, validate
 from .delegates import PROJECT_ROLE, ProjectDelegate, SegmentDelegate, SegmentTableModel, rich_html
-from .decor import AuroraBackground, FeatureCard, GradientTitle, HeroLogo, Pill, SidebarFrame, StatsLegend
+from .decor import AuroraBackground, FeatureCard, GradientTitle, HeroLogo, Pill, SidebarFrame, StatsLegend, WeaveMap
 from .dialogs import GlossaryDialog, NewProjectDialog, fill_languages
 from .platform_utils import set_app_id, set_dark_titlebar
 from .resources import assets_dir, samples_dir
@@ -225,8 +225,12 @@ class MainWindow(QMainWindow):
 
         self.bar = SegmentedBar()
         self.stats_label = StatsLegend()
+        self.weave = WeaveMap()
+        self.weave.setToolTip("Cada hilo es un texto. Haz clic para ir a él.")
+        self.weave.rowClicked.connect(self._jump_to_row)
         v.addWidget(self.bar)
         v.addWidget(self.stats_label)
+        v.addWidget(self.weave)
 
         # --- barra de herramientas
         tools = QHBoxLayout()
@@ -560,7 +564,9 @@ class MainWindow(QMainWindow):
     # ================================================================ tabla y editor
     def _reload_segments(self) -> None:
         keep = self.current.id if self.current else None
-        self.model.set_segments(self.service.segments(self.project.id))
+        segments = self.service.segments(self.project.id)
+        self.model.set_segments(segments)
+        self._refresh_weave(segments, animate=keep is None)
         self._update_stats()
         row = self.model.row_of(keep) if keep is not None else None
         if row is not None:
@@ -569,6 +575,20 @@ class MainWindow(QMainWindow):
             self.current = None
             self._set_editor_enabled(False)
             self._clear_editor()
+
+    def _refresh_weave(self, segments, animate: bool) -> None:
+        self.weave.set_segments([sg.status for sg in segments], [self._tip(sg) for sg in segments], animate)
+        row = self.model.row_of(self.current.id) if self.current else None
+        self.weave.set_current(row if row is not None else -1)
+
+    @staticmethod
+    def _tip(seg) -> str:
+        text = (seg.target_text or seg.source_text or "").replace("\n", " ")
+        return text[:90] + ("…" if len(text) > 90 else "")
+
+    def _jump_to_row(self, row: int) -> None:
+        self.table.selectRow(row)
+        self.table.scrollTo(self.model.index(row, 0), QAbstractItemView.PositionAtCenter)
 
     def _update_stats(self) -> None:
         s = self.service.stats(self.project.id)
@@ -600,6 +620,7 @@ class MainWindow(QMainWindow):
         if seg is None:
             return
         self.current = seg
+        self.weave.set_current(current.row())
         self._set_editor_enabled(True)
         self._show_source(seg.source_text)
         self.target_box.blockSignals(True)
@@ -648,6 +669,9 @@ class MainWindow(QMainWindow):
             return
         self.current = seg
         self.model.update_segment(seg)
+        row = self.model.row_of(seg.id)
+        if row is not None:
+            self.weave.set_status(row, seg.status, self._tip(seg))
         self._update_stats()
         self._refresh_projects()
         if has_errors(issues):
