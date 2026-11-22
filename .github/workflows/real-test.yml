@@ -1,0 +1,40 @@
+name: Prueba real de traducción
+
+# Descarga los textos de un juego real (SuperTux, GPL), los traduce con Argos, valida y exporta.
+# Se lanza a mano desde Actions → «Prueba real de traducción» → Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      lang:
+        description: "Idioma de destino"
+        default: "es"
+
+jobs:
+  real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install argostranslate
+      - name: Obtener los textos de SuperTux
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/SuperTux/supertux supertux
+          cd supertux && git sparse-checkout set data/locale
+          ls data/locale | head -5
+          ls data/locale/*.pot
+      - name: Traducir, validar y exportar
+        run: |
+          pot=$(ls supertux/data/locale/*.pot | head -1)
+          python tools/real_test.py "$pot" --lang "${{ inputs.lang }}" --out resultado.po 2>&1 | tee prueba.log
+          test ${PIPESTATUS[0]} -eq 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prueba-real-supertux
+          path: |
+            resultado.po
+            prueba.log
