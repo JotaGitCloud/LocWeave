@@ -61,11 +61,13 @@ def main() -> int:
     ok = True
     parsed = get_handler(str(out)).parse(out)
     print(f"Re-lectura del exportado: {len(parsed)} entradas")
-    msgfmt = subprocess.run(["msgfmt", "-c", "-o", "/dev/null", str(out)], capture_output=True, text=True)
+    try:
+        msgfmt = subprocess.run(["msgfmt", "-c", "-o", "/dev/null", str(out)], capture_output=True, text=True)
+    except FileNotFoundError:
+        print("msgfmt no disponible; se omite la validación con gettext.")
+        return 0 if stats.get("total", 0) > 0 else 1
     if msgfmt.returncode == 0:
         print("msgfmt -c: el archivo exportado es válido para gettext.")
-    elif msgfmt.returncode == 127 or "No such file" in (msgfmt.stderr or ""):
-        print("msgfmt no disponible; se omite.")
     else:
         ok = False
         print("msgfmt -c REPORTÓ PROBLEMAS:\n" + (msgfmt.stderr or "")[:2000])

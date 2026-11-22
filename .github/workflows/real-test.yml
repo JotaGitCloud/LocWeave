@@ -23,6 +23,7 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install argostranslate
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq gettext
       - name: Obtener los textos de SuperTux
         run: |
           git clone --depth 1 --filter=blob:none --sparse https://github.com/SuperTux/supertux supertux
