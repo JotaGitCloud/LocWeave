@@ -1,0 +1,43 @@
+name: Capturas de la interfaz
+
+# Genera capturas de la ventana (tema oscuro y claro) sin compilar el .exe: tarda ~2 minutos.
+# Las imágenes salen codificadas en el registro del paso «Capturas» (líneas SHOT|nombre|parte|datos).
+on:
+  push:
+    branches: ["qt-migration"]
+    paths: ["app/gui/**", "app/selftest.py", ".github/workflows/screenshots.yml"]
+  workflow_dispatch:
+
+jobs:
+  screenshots:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install "PySide6-Essentials>=6.7,<7"
+      - name: Generar capturas
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP "shots"
+          python main.py --selftest (Join-Path $env:RUNNER_TEMP "st.txt") --screenshots $dir
+          Get-Content (Join-Path $env:RUNNER_TEMP "st.txt") | Select-Object -First 12
+      - name: Capturas
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP "shots"
+          Get-ChildItem $dir -Filter *.png | ForEach-Object {
+            $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($_.FullName))
+            $i = 0
+            for ($pos = 0; $pos -lt $b64.Length; $pos += 3000) {
+              $len = [Math]::Min(3000, $b64.Length - $pos)
+              Write-Host ("SHOT|{0}|{1}|{2}" -f $_.Name, $i, $b64.Substring($pos, $len))
+              $i++
+            }
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: capturas
+          path: ${{ runner.temp }}/shots/*.png
