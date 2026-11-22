@@ -125,13 +125,30 @@ class GradientTitle(QWidget):
         painter.drawText(self.rect(), Qt.AlignCenter, self._text)
 
 
-class Pill(QLabel):
+class Pill(QWidget):
     """Etiqueta redondeada, p. ej. «100 % local»."""
 
     def __init__(self, text: str, parent=None):
-        super().__init__(text, parent)
-        self.setProperty("role", "pill")
-        self.setAlignment(Qt.AlignCenter)
+        super().__init__(parent)
+        self._text = text
+        font = QFont(self.font())
+        font.setPointSizeF(9.5)
+        font.setWeight(QFont.Medium)
+        self._font = font
+        self.setFixedSize(QFontMetrics(font).horizontalAdvance(text) + 30, 26)
+        theme.changed.connect(self.update)
+
+    def paintEvent(self, _event):
+        p = theme.p
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        painter.setBrush(qcolor(p["accent"], 0.13))
+        painter.setPen(QPen(qcolor(p["accent"], 0.32), 1))
+        painter.drawRoundedRect(rect, rect.height() / 2, rect.height() / 2)
+        painter.setFont(self._font)
+        painter.setPen(QColor(p["chip"]))
+        painter.drawText(rect, Qt.AlignCenter, self._text)
 
 
 class FeatureCard(QFrame):
@@ -140,7 +157,7 @@ class FeatureCard(QFrame):
     def __init__(self, number: str, icon_name: str, title: str, text: str, parent=None):
         super().__init__(parent)
         self.setObjectName("StepCard")
-        self.setFixedSize(248, 168)
+        self.setFixedSize(248, 150)
         self.setCursor(Qt.ArrowCursor)
         self._icon_name = icon_name
         v = QVBoxLayout(self)

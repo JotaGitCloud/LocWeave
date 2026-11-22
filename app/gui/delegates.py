@@ -3,12 +3,13 @@ import html
 from typing import Dict, List, Optional
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QPointF, QRect, QRectF, QSize, Qt
-from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPainterPath, QPen, QTextDocument, QTextOption
+from PySide6.QtGui import (QBrush, QColor, QFontMetrics, QLinearGradient, QPainter, QPainterPath, QPen, QTextDocument,
+                           QTextOption)
 from PySide6.QtWidgets import QStyle, QStyledItemDelegate
 
 from ..models import STATUS_LABELS, Segment
 from ..services.placeholders import PLACEHOLDER_RE
-from .theme import mix, status_style, theme
+from .theme import mix, qcolor, status_style, theme
 
 COLUMNS = ("#", "Clave", "Original", "Traducción", "Estado")
 SEGMENT_ROLE = Qt.UserRole + 1
@@ -126,7 +127,8 @@ class SegmentDelegate(QStyledItemDelegate):
         last = index.column() == index.model().columnCount() - 1
         first = index.column() == 0
         radius = 8.0
-        r.adjust(-radius if first else 0, 1, radius if last else 0, -1)
+        # cada celda dibuja un trozo de la misma «píldora»: los extremos se prolongan fuera de la celda y se recortan
+        r.adjust(0 if first else -radius, 1, 0 if last else radius, -1)
         path = QPainterPath()
         path.addRoundedRect(r, radius, radius)
         painter.setClipRect(option.rect)
@@ -163,8 +165,15 @@ class SegmentDelegate(QStyledItemDelegate):
             else:
                 doc = _document(text, base_bg, option.font)
                 painter.setClipRect(inner)
-                painter.translate(inner.left(), inner.top() + (inner.height() - doc.size().height()) / 2)
+                dy = inner.top() + (inner.height() - doc.size().height()) / 2
+                painter.translate(inner.left(), dy)
                 doc.drawContents(painter)
+                painter.translate(-inner.left(), -dy)
+                if doc.idealWidth() > inner.width():   # texto largo: se desvanece al borde en lugar de cortarse en seco
+                    fade = QLinearGradient(inner.right() - 34, 0, inner.right(), 0)
+                    fade.setColorAt(0.0, qcolor(base_bg, 0.0))
+                    fade.setColorAt(1.0, qcolor(base_bg, 1.0))
+                    painter.fillRect(QRect(inner.right() - 34, rect.top(), 35, rect.height()), QBrush(fade))
         else:
             self._paint_pill(painter, inner, seg, option.font)
         painter.restore()
