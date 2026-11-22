@@ -55,7 +55,8 @@ class NewProjectDialog(StyledDialog):
         layout.setContentsMargins(32, 28, 32, 26)
         layout.setSpacing(16)
         layout.addWidget(DialogHeader(
-            "plus", "Nuevo proyecto", "Elige el archivo con los textos de tu juego. LocWeave detecta el idioma por ti."))
+            "plus", "Nuevo proyecto",
+            "Elige el archivo con los textos de tu juego. LocWeave detecta el idioma por ti."))
 
         self.drop = DropZone(SUPPORTED_EXTENSIONS)
         self.drop.browseRequested.connect(self._browse)
@@ -265,7 +266,7 @@ class GlossaryDialog(StyledDialog):
         n = len(terms)
         self.header.subtitle.setText(
             "Estos términos se traducen siempre igual: nombres propios, objetos, lugares."
-            + (f"  ·  {n} {'término' if n == 1 else 'términos'}" if n else ""))
+            + (f"\n{n} {'término' if n == 1 else 'términos'} en este proyecto" if n else ""))
         self._sync()
 
     def _add(self) -> None:

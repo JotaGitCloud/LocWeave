@@ -568,7 +568,7 @@ class DialogHeader(QWidget):
         self._tile.setAlignment(Qt.AlignCenter)
         row.addWidget(self._tile, 0, Qt.AlignTop)
         col = QVBoxLayout()
-        col.setSpacing(3)
+        col.setSpacing(0)
         self.title = QLabel(title)
         self.title.setProperty("role", "title")
         self.subtitle = QLabel(subtitle)
