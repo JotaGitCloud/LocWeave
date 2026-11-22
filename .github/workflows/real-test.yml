@@ -1,8 +1,11 @@
 name: Prueba real de traducción
 
 # Descarga los textos de un juego real (SuperTux, GPL), los traduce con Argos, valida y exporta.
-# Se lanza a mano desde Actions → «Prueba real de traducción» → Run workflow.
+# Se lanza al cambiar estos archivos o a mano desde Actions → «Prueba real de traducción» → Run workflow.
 on:
+  push:
+    branches: ["qt-migration"]
+    paths: ["tools/real_test.py", ".github/workflows/real-test.yml"]
   workflow_dispatch:
     inputs:
       lang:
@@ -29,7 +32,7 @@ jobs:
       - name: Traducir, validar y exportar
         run: |
           pot=$(ls supertux/data/locale/*.pot | head -1)
-          python tools/real_test.py "$pot" --lang "${{ inputs.lang }}" --out resultado.po 2>&1 | tee prueba.log
+          python tools/real_test.py "$pot" --lang "${{ inputs.lang || 'es' }}" --out resultado.po 2>&1 | tee prueba.log
           test ${PIPESTATUS[0]} -eq 0
       - uses: actions/upload-artifact@v4
         if: always()
