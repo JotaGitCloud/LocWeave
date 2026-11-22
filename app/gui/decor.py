@@ -1,7 +1,8 @@
 """Elementos decorativos: fondos con brillo, logo con halo, título con degradado, tarjetas y etiquetas."""
+import math
 from typing import List
 
-from PySide6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QVariantAnimation, Signal
+from PySide6.QtCore import QEasingCurve, QPointF, QRectF, Qt, QTimer, QVariantAnimation, Signal
 from PySide6.QtGui import (QBrush, QColor, QFont, QFontMetrics, QLinearGradient, QPainter, QPainterPath, QPen,
                            QRadialGradient)
 from PySide6.QtSvg import QSvgRenderer
@@ -467,3 +468,68 @@ class ProgressRing(QWidget):
         painter.setFont(font)
         painter.setPen(QColor(p["muted"]))
         painter.drawText(QRectF(self.rect()).adjusted(0, 22, 0, 22), Qt.AlignCenter, "avance")
+
+
+class LoomBackground(AuroraBackground):
+    """Fondo de inicio con un telar: hilos que ondulan despacio y una lanzadera de luz que los recorre."""
+
+    THREADS = 13
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._phase = 0.0
+        self._timer = QTimer(self)
+        self._timer.setInterval(33)
+        self._timer.timeout.connect(self._advance)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._timer.start()
+
+    def hideEvent(self, event):
+        self._timer.stop()
+        super().hideEvent(event)
+
+    def _advance(self) -> None:
+        self._phase += 0.016
+        self.update()
+
+    def _thread_y(self, k: int, x: float, h: float) -> float:
+        base = h * (0.10 + 0.80 * k / (self.THREADS - 1))
+        amp = 16 + 9 * math.sin(k * 1.3)
+        speed = 0.55 + 0.06 * (k % 5)
+        return base + amp * math.sin(x / (150 + 17 * k) + self._phase * speed + k * 0.9) \
+            + 7 * math.sin(x / 61 - self._phase * 0.8 + k)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        p = theme.p
+        dark = p["name"] == "dark"
+        w, h = float(self.width()), float(self.height())
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        fade = QLinearGradient(0, 0, w, 0)
+        for k in range(self.THREADS):
+            alpha = (0.20 if dark else 0.26) * (0.45 + 0.55 * ((k * 5) % 7) / 6)
+            fade.setColorAt(0.0, qcolor(p["accent"], 0))
+            fade.setColorAt(0.25, qcolor(p["accent"], alpha))
+            fade.setColorAt(0.75, qcolor(VIOLET, alpha))
+            fade.setColorAt(1.0, qcolor(VIOLET, 0))
+            path = QPainterPath()
+            x = -10.0
+            path.moveTo(x, self._thread_y(k, x, h))
+            while x < w + 10:
+                x += 10.0
+                path.lineTo(x, self._thread_y(k, x, h))
+            painter.setPen(QPen(QBrush(fade), 1.5 if k % 3 else 2.2))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawPath(path)
+        # lanzadera: un punto de luz que recorre un hilo de lado a lado
+        k = self.THREADS // 2
+        t = (self._phase * 0.22) % 1.0
+        x = -40 + (w + 80) * t
+        center = QPointF(x, self._thread_y(k, x, h))
+        _glow(painter, center, 70, VIOLET, 0.55 if dark else 0.35)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor("#FFFFFF") if dark else QColor(p["accent"]))
+        painter.drawEllipse(center, 2.6, 2.6)

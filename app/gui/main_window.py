@@ -21,8 +21,8 @@ from ..services.placeholders import extract_placeholders
 from ..services.project_service import LocWeaveService
 from ..services.validation import has_errors, validate
 from .delegates import PROJECT_ROLE, ProjectDelegate, SegmentDelegate, SegmentTableModel, rich_html
-from .decor import (AuroraBackground, FeatureCard, GlowCard, GradientTitle, HeroLogo, Pill, ProgressRing, SidebarFrame,
-                    StatsLegend, WeaveMap)
+from .decor import (AuroraBackground, FeatureCard, GlowCard, GradientTitle, HeroLogo, LoomBackground, Pill,
+                    ProgressRing, SidebarFrame, StatsLegend, WeaveMap)
 from .dialogs import GlossaryDialog, NewProjectDialog, fill_languages
 from .platform_utils import set_app_id, set_dark_titlebar
 from .resources import assets_dir, samples_dir
@@ -153,7 +153,7 @@ class MainWindow(QMainWindow):
         return side
 
     def _build_empty_page(self) -> QWidget:
-        page = AuroraBackground()
+        page = LoomBackground()
         outer = QVBoxLayout(page)
         outer.addStretch(1)
         col = QVBoxLayout()
@@ -498,7 +498,7 @@ class MainWindow(QMainWindow):
             item = QStandardItem(project.name)
             item.setData(project.id, Qt.UserRole)
             item.setData({"name": project.name, "subtitle": f"{src} → {tgt} · {stats.get('total', 0)} textos",
-                          "progress": done / total}, PROJECT_ROLE)
+                          "progress": done / total, "counts": stats}, PROJECT_ROLE)
             item.setEditable(False)
             self.project_model.appendRow(item)
             if self.project and project.id == self.project.id:

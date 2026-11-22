@@ -197,22 +197,47 @@ class SegmentDelegate(QStyledItemDelegate):
 
 # ------------------------------------------------------------------ delegado de proyectos
 class ProjectDelegate(QStyledItemDelegate):
+    ACCENTS = ("accent", "#9B6BFF", "#2DB7A3", "#E6678F", "#F2B84B", "#5BC48A")
+    STATUS_KEYS = (("reviewed", "bar_ok"), ("translated", "accent"), ("needs_review", "bar_rv"), ("pending", "track"))
+    CELLS, ROWS = 26, 2
+
     def sizeHint(self, option, index):
-        return QSize(option.rect.width(), 70)
+        return QSize(option.rect.width(), 84)
+
+    @classmethod
+    def accent_for(cls, name: str, p: dict) -> str:
+        pick = cls.ACCENTS[sum(ord(c) for c in name) % len(cls.ACCENTS)]
+        return p.get(pick, pick)
+
+    @classmethod
+    def mini_weave(cls, counts: dict) -> list:
+        """Reparte las celdas del mini tejido según las proporciones de cada estado (orden estable, aspecto tejido)."""
+        n = cls.CELLS * cls.ROWS
+        total = sum(counts.get(k, 0) for k, _ in cls.STATUS_KEYS) or 1
+        cells, used = [], 0
+        for key, _ in cls.STATUS_KEYS:
+            c = round(counts.get(key, 0) / total * n)
+            cells += [key] * min(c, n - used)
+            used += c
+        cells += ["pending"] * (n - len(cells))
+        return [cells[(i * 11) % n] for i in range(n)]
 
     def paint(self, painter: QPainter, option, index) -> None:
         p = theme.p
         info: dict = index.data(PROJECT_ROLE)
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing)
-        rect = QRectF(option.rect).adjusted(4, 2, -4, -2)
+        rect = QRectF(option.rect).adjusted(4, 3, -4, -3)
         selected = bool(option.state & QStyle.State_Selected)
         hovered = bool(option.state & QStyle.State_MouseOver)
-        if selected or hovered:
-            painter.setBrush(QColor(p["sel_bg"] if selected else p["raised"]))
-            painter.setPen(QPen(QColor(p["sel_border"]), 1) if selected else Qt.NoPen)
-            painter.drawRoundedRect(rect, 10, 10)
-        inner = rect.adjusted(14, 10, -14, -10)
+        painter.setBrush(QColor(p["sel_bg"] if selected else (p["raised"] if hovered else qcolor(p["raised"], 0.45))))
+        painter.setPen(QPen(QColor(p["sel_border"]), 1) if selected else Qt.NoPen)
+        painter.drawRoundedRect(rect, 11, 11)
+        accent = QColor(self.accent_for(info["name"], p))
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(accent)
+        painter.drawRoundedRect(QRectF(rect.left() + 5, rect.top() + 13, 3.5, rect.height() - 26), 1.75, 1.75)
+        inner = rect.adjusted(20, 9, -12, -9)
         font = option.font
         metrics = QFontMetrics(font)
         painter.setFont(font)
@@ -225,13 +250,19 @@ class ProjectDelegate(QStyledItemDelegate):
         painter.setPen(QColor(p["muted"]))
         painter.drawText(QRectF(inner.left(), inner.top() + 19, inner.width(), 16), Qt.AlignLeft | Qt.AlignVCenter,
                          QFontMetrics(small).elidedText(info["subtitle"], Qt.ElideRight, int(inner.width())))
-        track = QRectF(inner.left(), inner.bottom() - 4, inner.width(), 4)
+        # mini tejido: dos filas de hilos con los colores de cada estado
+        cells = self.mini_weave(info.get("counts", {}))
+        colors = {key: p[col] for key, col in self.STATUS_KEYS}
+        area_top, area_h = inner.bottom() - 15, 15.0
+        step = inner.width() / self.CELLS
+        size = min(step, area_h / self.ROWS)
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(p["track"]))
-        painter.drawRoundedRect(track, 2, 2)
-        fraction = info["progress"]
-        if fraction > 0:
-            done = QRectF(track.left(), track.top(), track.width() * fraction, 4)
-            painter.setBrush(QColor(p["bar_ok"] if fraction >= 0.999 else p["accent"]))
-            painter.drawRoundedRect(done, 2, 2)
+        for i, status in enumerate(cells):
+            col, row = i % self.CELLS, i // self.CELLS
+            color = QColor(colors[status])
+            if status == "pending":
+                color.setAlphaF(0.55)
+            painter.setBrush(color)
+            painter.drawRoundedRect(QRectF(inner.left() + col * step + 0.8, area_top + row * (size + 0.5), step - 1.6,
+                                           size - 1.4), 1.6, 1.6)
         painter.restore()
