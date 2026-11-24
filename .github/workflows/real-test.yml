@@ -7,13 +7,14 @@ on:
     branches: ["qt-migration"]
     paths: ["tools/real_test.py", ".github/workflows/real-test.yml"]
   workflow_dispatch:
-    inputs:
-      lang:
-        description: "Idioma de destino"
-        default: "es"
 
 jobs:
   real:
+    name: traducir a ${{ matrix.lang }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: [es, ga]
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -33,12 +34,12 @@ jobs:
       - name: Traducir, validar y exportar
         run: |
           pot=$(ls supertux/data/locale/*.pot | head -1)
-          python tools/real_test.py "$pot" --lang "${{ inputs.lang || 'es' }}" --out resultado.po 2>&1 | tee prueba.log
+          python tools/real_test.py "$pot" --lang "${{ matrix.lang }}" --out "${{ matrix.lang }}.po" 2>&1 | tee prueba.log
           test ${PIPESTATUS[0]} -eq 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: prueba-real-supertux
+          name: prueba-real-supertux-${{ matrix.lang }}
           path: |
-            resultado.po
+            ${{ matrix.lang }}.po
             prueba.log

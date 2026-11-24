@@ -86,6 +86,12 @@ class PoTests(TempCase):
         self.assertIn('msgstr[0] "りんご"', text_ja)
         self.assertNotIn("msgstr[1]", text_ja)
         self.assertIn("nplurals=1; plural=0;", text_ja)
+        out_ga = self.dir / "ga.po"
+        h.export(src, out_ga, {"One apple": "Úll amháin", "One apple [plural]": "%d úll"}, "ga")
+        text_ga = out_ga.read_text(encoding="utf-8")
+        self.assertIn("nplurals=5;", text_ga)
+        self.assertIn('msgstr[0] "Úll amháin"', text_ga)
+        self.assertIn('msgstr[4] "%d úll"', text_ga)
         existing = {e.key: e.existing for e in h.parse(out)}
         self.assertEqual(existing["One apple"], "Una manzana")
         self.assertEqual(existing["One apple [plural]"], "%d manzanas")
