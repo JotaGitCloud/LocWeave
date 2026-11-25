@@ -1,37 +1,58 @@
-from sqlalchemy import String, Text, ForeignKey, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.database import Base
+"""Modelos de datos del dominio."""
+import json
+from dataclasses import dataclass, field
+from typing import List
 
-class Project(Base):
-    __tablename__ = "projects"
+STATUS_PENDING = "pending"
+STATUS_TRANSLATED = "translated"
+STATUS_NEEDS_REVIEW = "needs_review"
+STATUS_REVIEWED = "reviewed"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=func.now())
+STATUS_LABELS = {
+    STATUS_PENDING: "Pendiente",
+    STATUS_TRANSLATED: "Traducido",
+    STATUS_NEEDS_REVIEW: "Revisar",
+    STATUS_REVIEWED: "Revisado",
+}
 
-    strings: Mapped[list["StringEntry"]] = relationship(back_populates="project")
 
-class StringEntry(Base):
-    __tablename__ = "string_entries"
+@dataclass
+class Issue:
+    code: str
+    severity: str  # "error" | "warning"
+    message: str
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"))
-    string_key: Mapped[str] = mapped_column(String(255))
-    source_text: Mapped[str] = mapped_column(Text)
-    context: Mapped[str | None] = mapped_column(Text, nullable=True)
-    max_length: Mapped[int | None] = mapped_column(nullable=True)
 
-    project: Mapped["Project"] = relationship(back_populates="strings")
-    translations: Mapped[list["Translation"]] = relationship(back_populates="string_entry")
+@dataclass
+class Project:
+    id: int
+    name: str
+    source_lang: str
+    target_lang: str
+    source_path: str
+    file_format: str
+    created_at: str
 
-class Translation(Base):
-    __tablename__ = "translations"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    string_entry_id: Mapped[int] = mapped_column(ForeignKey("string_entries.id"))
-    language: Mapped[str] = mapped_column(String(10))
-    translated_text: Mapped[str] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(String(20), default="pending")
+@dataclass
+class Segment:
+    id: int
+    project_id: int
+    position: int
+    key: str
+    source_text: str
+    target_text: str = ""
+    status: str = STATUS_PENDING
+    context: str = ""
+    issues: List[Issue] = field(default_factory=list)
 
-    string_entry: Mapped["StringEntry"] = relationship(back_populates="translations")
+    @staticmethod
+    def issues_from_json(raw: str) -> List[Issue]:
+        try:
+            return [Issue(**item) for item in json.loads(raw or "[]")]
+        except (ValueError, TypeError):
+            return []
+
+    @staticmethod
+    def issues_to_json(issues: List[Issue]) -> str:
+        return json.dumps([i.__dict__ for i in issues], ensure_ascii=False)

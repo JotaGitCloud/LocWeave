@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # El núcleo (parsers, pipeline, base de datos) solo usa la biblioteca estándar.
+      # En Windows se instala PySide6 para correr también la prueba de humo de la interfaz (modo offscreen).
+      - name: Instalar PySide6
+        if: runner.os == 'Windows'
+        run: pip install "PySide6-Essentials>=6.7,<7"
+      - name: Ejecutar pruebas
+        run: python -m unittest discover -s tests -v

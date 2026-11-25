@@ -1,0 +1,45 @@
+name: Prueba real de traducción
+
+# Descarga los textos de un juego real (SuperTux, GPL), los traduce con Argos, valida y exporta.
+# Se lanza al cambiar estos archivos o a mano desde Actions → «Prueba real de traducción» → Run workflow.
+on:
+  push:
+    branches: ["qt-migration"]
+    paths: ["tools/real_test.py", ".github/workflows/real-test.yml"]
+  workflow_dispatch:
+
+jobs:
+  real:
+    name: traducir a ${{ matrix.lang }}
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: [es, ga]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install argostranslate
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq gettext
+      - name: Obtener los textos de SuperTux
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/SuperTux/supertux supertux
+          cd supertux && git sparse-checkout set data/locale
+          ls data/locale | head -5
+          ls data/locale/*.pot
+      - name: Traducir, validar y exportar
+        run: |
+          pot=$(ls supertux/data/locale/*.pot | head -1)
+          python tools/real_test.py "$pot" --lang "${{ matrix.lang }}" --out "${{ matrix.lang }}.po" 2>&1 | tee prueba.log
+          test ${PIPESTATUS[0]} -eq 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prueba-real-supertux-${{ matrix.lang }}
+          path: |
+            ${{ matrix.lang }}.po
+            prueba.log
