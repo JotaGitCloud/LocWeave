@@ -115,7 +115,7 @@ class MainWindow(QMainWindow):
         head = QHBoxLayout()
         head.setContentsMargins(8, 0, 0, 0)
         head.setSpacing(10)
-        head.addWidget(LogoWidget(30))
+        head.addWidget(LogoWidget(40))
         titles = QVBoxLayout()
         titles.setSpacing(0)
         name = _label(APP_NAME)
